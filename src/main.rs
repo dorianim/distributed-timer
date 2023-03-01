@@ -5,9 +5,14 @@ use axum::{
     },
     response::{Html, IntoResponse},
     routing::get,
+    routing::post,
+    routing::put,
     Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use redis;
+use redis::Commands;
+use std::env;
 use std::{
     collections::HashSet,
     net::SocketAddr,
@@ -15,25 +20,76 @@ use std::{
 };
 use tokio::sync::broadcast;
 
+use serde::{de::value::StringDeserializer, Deserialize, Serialize};
 
-async fn ws_handler(
-    ws: WebSocketUpgrade,
-) -> impl IntoResponse {
+use tower_http::cors::{Any, CorsLayer};
+
+use axum::Json;
+
+#[derive(Clone)]
+struct AppState {
+    connections_string: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Segment {
+    label: String,
+    time: u32,
+    sound: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+struct TimerResponse {
+    // Save in Redis
+    segments: Vec<Segment>,
+    name: String,
+    repeat: bool,
+    start_at: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+struct TimerRequest {
+    // Get from User
+    segments: Vec<Segment>,
+    name: String,
+    password: String,
+    repeat: bool,
+    start_at: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Timer {
+    // Return after TimerRequest
+    segments: Vec<Segment>,
+    name: String,
+    repeat: bool,
+    start_at: u64,
+    id: String, // 5 random chars
+}
+
+async fn get_redis(key: String) -> String {
+    let client = redis::Client::open(env::var("REDIS_STRING").expect("REDIS_STRING is not set"));
+    let mut con = client.unwrap().get_connection().unwrap();
+    let value: String = con.get(key).unwrap();
+    value
+}
+
+async fn set_redis(key: String, value: String) {
+    let client = redis::Client::open(env::var("REDIS_STRING").expect("REDIS_STRING is not set"));
+    let mut con = client.unwrap().get_connection().unwrap();
+    let _: () = con.set(key, value).unwrap();
+}
+
+async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
     // finalize the upgrade process by returning upgrade callback.
     // we can customize the callback by sending additional info such as address.
     ws.on_upgrade(move |socket| handle_socket(socket))
 }
 
-async fn handle_socket(
-    mut socket: WebSocket,
-) {
-
+async fn handle_socket(mut socket: WebSocket) {
     let (mut sender, mut receiver) = socket.split();
     // send a message to the client
-    sender
-        .send("Hello from the server".into())
-        .await
-        .unwrap();
+    sender.send("Hello from the server".into()).await.unwrap();
 
     // receive messages from the client
     while let Some(Ok(msg)) = receiver.next().await {
@@ -45,11 +101,48 @@ async fn handle_socket(
     println!("Client disconnected");
 }
 
+async fn create_timer() -> Json<Timer> {
+    let timer = Timer {
+        segments: vec![Segment {
+            label: "Test".to_string(),
+            time: 10,
+            sound: true,
+        }],
+        name: "Test".to_string(),
+        repeat: false,
+        start_at: 0,
+        id: "12345".to_string(),
+    };
+
+    Json(timer)
+}
+
+async fn update_timer(request: TimerRequest) {
+    let timer = Timer {
+        segments: vec![Segment {
+            label: "Test".to_string(),
+            time: 10,
+            sound: true,
+        }],
+        name: "Test".to_string(),
+        repeat: false,
+        start_at: 0,
+        id: "12345".to_string(),
+    };
+}
+
+async fn delete_timer() -> impl IntoResponse {
+    String::from("Not Implemented")
+}
+
 #[tokio::main]
 async fn main() {
+    let cors = CorsLayer::new().allow_origin(Any);
+
     // build our application with a single route
     let app = Router::new()
-        .route("/ws", get(ws_handler));
+        .route("/ws", get(ws_handler))
+        .route("/timer", post(create_timer).delete(delete_timer));
 
     // run it with hyper on localhost:3000
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
