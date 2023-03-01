@@ -1,7 +1,8 @@
 use crate::SharedState;
 use crate::{Segment, Timer};
-use axum::extract::State;
-use axum::routing::post;
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::routing::{get, post};
 use axum::Router;
 use axum::{response::IntoResponse, Json};
 use redis::Commands;
@@ -10,17 +11,17 @@ use sha3::Digest;
 use sha3::Sha3_256;
 use std::str;
 
-const alphanumeric: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                              abcdefghijklmnopqrstuvwxyz\
                              0123456789";
 
 #[derive(Serialize, Deserialize)]
 struct TimerResponse {
-    // Save in Redis
     segments: Vec<Segment>,
     name: String,
     repeat: bool,
     start_at: u64,
+    id: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -33,30 +34,36 @@ pub struct TimerRequest {
     start_at: u64,
 }
 
+pub async fn sha3_from_string(string: String) -> Vec<u8> {
+    let mut hasher = Sha3_256::new();
+    hasher.update(string);
+    hasher.finalize().to_vec()
+}
+
+pub async fn generate_id(name: String) -> String {
+    // Generate id
+    let id_hash_u8: Vec<u8> = sha3_from_string(name).await;
+    let mut id_hash = String::new();
+    for i in 0..5 {
+        id_hash.push(ALPHANUMERIC[(id_hash_u8[i] as usize) % 62] as char);
+    }
+    id_hash
+}
+
 pub async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerRequest>,
 ) -> Json<Timer> {
-    // create a SHA3-256 object
-    let mut hasher = Sha3_256::new();
-
-    // write input message
-    hasher.update(request.name.clone());
-
-    // read hash digest
-    let id_hash_u8: &[u8] = &hasher.finalize()[0..5];
-    let mut id_hash = String::new();
-    for i in id_hash_u8 {
-        id_hash.push(alphanumeric[(*i as usize) % 62] as char);
-    }
-
+    // Start password hash
+    let password_hash_u8 = sha3_from_string(request.password);
+    let id_hash = generate_id(request.name.clone());
     let timer = Timer {
         segments: request.segments,
         name: request.name,
         repeat: request.repeat,
         start_at: request.start_at,
-        password: request.password,
-        id: id_hash,
+        password: hex::encode(password_hash_u8.await),
+        id: id_hash.await,
     };
 
     let mut redis = state.as_ref().redis.write().unwrap();
@@ -67,7 +74,42 @@ pub async fn create_timer(
     Json(timer)
 }
 
-pub async fn update_timer(State(state): State<SharedState>, Json(request): Json<TimerRequest>) {}
+pub async fn get_timer(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+) -> Json<TimerResponse> {
+    let mut redis = state.as_ref().redis.write().unwrap();
+    let timer: TimerResponse =
+        serde_json::from_str(&redis.get::<String, String>(id).unwrap()).unwrap();
+    Json(timer)
+}
+
+pub async fn update_timer(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+    Json(request): Json<TimerRequest>,
+) -> StatusCode {
+    let mut redis = state.as_ref().redis.write().unwrap();
+    let password_hash_u8 = sha3_from_string(request.password).await;
+
+    let old_timer: Timer =
+        serde_json::from_str(&redis.get::<String, String>(id.clone()).unwrap()).unwrap();
+    if old_timer.password != hex::encode(password_hash_u8.clone()) {
+        return StatusCode::UNAUTHORIZED;
+    }
+    let timer = Timer {
+        segments: request.segments,
+        name: request.name,
+        repeat: request.repeat,
+        start_at: request.start_at,
+        password: hex::encode(password_hash_u8),
+        id: id,
+    };
+    redis
+        .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
+        .unwrap();
+    StatusCode::OK
+}
 
 pub async fn delete_timer(State(state): State<SharedState>) -> impl IntoResponse {
     String::from("Not Implemented")
@@ -78,8 +120,7 @@ pub async fn delete_timer(State(state): State<SharedState>) -> impl IntoResponse
 }*/
 
 pub fn routes() -> Router<SharedState> {
-    Router::new().route(
-        "/",
-        post(create_timer).put(update_timer).delete(delete_timer),
-    )
+    Router::new()
+        .route("/", post(create_timer).delete(delete_timer))
+        .route("/:id", get(get_timer).put(update_timer))
 }
