@@ -67,6 +67,7 @@ struct Timer {
     name: String,
     repeat: bool,
     start_at: u64,
+    password: String,
     id: String, // 5 random chars
 }
 
@@ -119,6 +120,7 @@ async fn create_timer(Json(request): Json<TimerRequest>) -> Json<Timer> {
         name: request.name,
         repeat: request.repeat,
         start_at: request.start_at,
+        password: request.password,
         id: id_hash,
     };
 
@@ -133,9 +135,13 @@ async fn delete_timer() -> impl IntoResponse {
     String::from("Not Implemented")
 }
 
+// async fn get_timer() -> Json<Timer> {
+//     String::from("Not Implemented")
+// }
+
 #[tokio::main]
 async fn main() {
-    let cors = CorsLayer::new().allow_origin(Any);
+    let cors = CorsLayer::new().allow_origin(Any).allow_headers(Any);
 
     // build our application with a single route
     let app = Router::new()
