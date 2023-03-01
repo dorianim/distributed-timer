@@ -9,6 +9,9 @@ use axum::{
     routing::put,
     Router,
 };
+use hex::encode;
+use std::str::from_utf8;
+use sha3::{Digest, Sha3_256};
 use futures::{sink::SinkExt, stream::StreamExt};
 use redis;
 use redis::Commands;
@@ -31,7 +34,7 @@ struct AppState {
     connections_string: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct Segment {
     label: String,
     time: u32,
@@ -57,7 +60,7 @@ struct TimerRequest {
     start_at: u64,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct Timer {
     // Return after TimerRequest
     segments: Vec<Segment>,
@@ -101,35 +104,30 @@ async fn handle_socket(mut socket: WebSocket) {
     println!("Client disconnected");
 }
 
-async fn create_timer() -> Json<Timer> {
+async fn create_timer(Json(request): Json<TimerRequest>) -> Json<Timer> {
+    // create a SHA3-256 object
+    let mut hasher = Sha3_256::new();
+
+    // write input message
+    hasher.update(request.name.clone());
+
+    // read hash digest
+    let id_hash: String = hex::encode(&hasher.finalize()[0..5]);
+
     let timer = Timer {
-        segments: vec![Segment {
-            label: "Test".to_string(),
-            time: 10,
-            sound: true,
-        }],
-        name: "Test".to_string(),
-        repeat: false,
-        start_at: 0,
-        id: "12345".to_string(),
+        segments: request.segments,
+        name: request.name,
+        repeat: request.repeat,
+        start_at: request.start_at,
+        id: id_hash,
     };
+
+    set_redis(timer.id.clone(), serde_json::to_string(&timer).unwrap()).await;
 
     Json(timer)
 }
 
-async fn update_timer(request: TimerRequest) {
-    let timer = Timer {
-        segments: vec![Segment {
-            label: "Test".to_string(),
-            time: 10,
-            sound: true,
-        }],
-        name: "Test".to_string(),
-        repeat: false,
-        start_at: 0,
-        id: "12345".to_string(),
-    };
-}
+async fn update_timer(request: TimerRequest) {}
 
 async fn delete_timer() -> impl IntoResponse {
     String::from("Not Implemented")
@@ -141,8 +139,9 @@ async fn main() {
 
     // build our application with a single route
     let app = Router::new()
-        .route("/ws", get(ws_handler))
-        .route("/timer", post(create_timer).delete(delete_timer));
+        .route("/api/ws", get(ws_handler))
+        .route("/api/timer", post(create_timer).delete(delete_timer))
+        .layer(cors);
 
     // run it with hyper on localhost:3000
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
