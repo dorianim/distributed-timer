@@ -42,7 +42,6 @@ async fn main() {
 
     //let state = SharedState::default();
 
-    // build our application with a single route
     let app = Router::new()
         .nest("/api/ws", routes::ws::routes())
         .nest("/api/timer", routes::timer::routes())

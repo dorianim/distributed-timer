@@ -8,6 +8,11 @@ use redis::Commands;
 use serde::{Deserialize, Serialize};
 use sha3::Digest;
 use sha3::Sha3_256;
+use std::str;
+
+const alphanumeric: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                             abcdefghijklmnopqrstuvwxyz\
+                             0123456789";
 
 #[derive(Serialize, Deserialize)]
 struct TimerResponse {
@@ -39,7 +44,11 @@ pub async fn create_timer(
     hasher.update(request.name.clone());
 
     // read hash digest
-    let id_hash: String = hex::encode(&hasher.finalize()[0..5]);
+    let id_hash_u8: &[u8] = &hasher.finalize()[0..5];
+    let mut id_hash = String::new();
+    for i in id_hash_u8 {
+        id_hash.push(alphanumeric[(*i as usize) % 62] as char);
+    }
 
     let timer = Timer {
         segments: request.segments,
