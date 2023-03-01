@@ -25,7 +25,7 @@ struct TimerResponse {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct TimerRequest {
+struct TimerRequest {
     // Get from User
     segments: Vec<Segment>,
     name: String,
@@ -34,15 +34,15 @@ pub struct TimerRequest {
     start_at: u64,
 }
 
-pub async fn sha3_from_string(string: String) -> Vec<u8> {
+fn sha3_from_string(string: String) -> Vec<u8> {
     let mut hasher = Sha3_256::new();
     hasher.update(string);
     hasher.finalize().to_vec()
 }
 
-pub async fn generate_id(name: String) -> String {
+fn generate_id(name: String) -> String {
     // Generate id
-    let id_hash_u8: Vec<u8> = sha3_from_string(name).await;
+    let id_hash_u8: Vec<u8> = sha3_from_string(name);
     let mut id_hash = String::new();
     for i in 0..5 {
         id_hash.push(ALPHANUMERIC[(id_hash_u8[i] as usize) % 62] as char);
@@ -50,7 +50,7 @@ pub async fn generate_id(name: String) -> String {
     id_hash
 }
 
-pub async fn create_timer(
+async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerRequest>,
 ) -> Json<Timer> {
@@ -62,8 +62,8 @@ pub async fn create_timer(
         name: request.name,
         repeat: request.repeat,
         start_at: request.start_at,
-        password: hex::encode(password_hash_u8.await),
-        id: id_hash.await,
+        password: hex::encode(password_hash_u8),
+        id: id_hash,
     };
 
     let mut redis = state.as_ref().redis.write().unwrap();
@@ -74,7 +74,7 @@ pub async fn create_timer(
     Json(timer)
 }
 
-pub async fn get_timer(
+async fn get_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Json<TimerResponse> {
@@ -84,13 +84,13 @@ pub async fn get_timer(
     Json(timer)
 }
 
-pub async fn update_timer(
+async fn update_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(request): Json<TimerRequest>,
 ) -> StatusCode {
     let mut redis = state.as_ref().redis.write().unwrap();
-    let password_hash_u8 = sha3_from_string(request.password).await;
+    let password_hash_u8 = sha3_from_string(request.password);
 
     let old_timer: Timer =
         serde_json::from_str(&redis.get::<String, String>(id.clone()).unwrap()).unwrap();
@@ -111,13 +111,9 @@ pub async fn update_timer(
     StatusCode::OK
 }
 
-pub async fn delete_timer(State(state): State<SharedState>) -> impl IntoResponse {
+async fn delete_timer(State(state): State<SharedState>) -> impl IntoResponse {
     String::from("Not Implemented")
 }
-
-/*async fn get_timer(State(state): State<RedisState>) -> Json<Timer> {
-    todo!()
-}*/
 
 pub fn routes() -> Router<SharedState> {
     Router::new()
