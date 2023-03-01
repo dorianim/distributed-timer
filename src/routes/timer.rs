@@ -66,7 +66,7 @@ async fn create_timer(
         id: id_hash,
     };
 
-    let mut redis = state.as_ref().redis.write().unwrap();
+    let mut redis = state.as_ref().redis.write().await;
     redis
         .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
         .unwrap();
@@ -78,7 +78,7 @@ async fn get_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Json<TimerResponse> {
-    let mut redis = state.as_ref().redis.write().unwrap();
+    let mut redis = state.as_ref().redis.write().await;
     let timer: TimerResponse =
         serde_json::from_str(&redis.get::<String, String>(id).unwrap()).unwrap();
     Json(timer)
@@ -89,7 +89,7 @@ async fn update_timer(
     Path(id): Path<String>,
     Json(request): Json<TimerRequest>,
 ) -> StatusCode {
-    let mut redis = state.as_ref().redis.write().unwrap();
+    let mut redis = state.as_ref().redis.write().await;
     let password_hash_u8 = sha3_from_string(request.password);
 
     let old_timer: Timer =

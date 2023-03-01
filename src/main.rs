@@ -1,8 +1,9 @@
 use axum::Router;
 use serde::{Deserialize, Serialize};
 
+use std::env;
 use std::sync::Arc;
-use std::{env, sync::RwLock};
+use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 
 mod routes;
