@@ -1,25 +1,10 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	export let data: PageData;
-	import { io } from 'socket.io-client';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 
 	let visible: boolean = true;
-
-	if (browser) {
-		const socket = new WebSocket('ws://131.159.218.193:3000/ws');
-
-		// Connection opened
-		socket.addEventListener('open', (event) => {
-			socket.send('Hello AAAAAAAAAADRIAN!');
-		});
-
-		// Listen for messages
-		socket.addEventListener('message', (event) => {
-			console.log('Message from server ', event.data);
-		});
-	}
 
 	const handleSubmit = (e: Event) => {
 		e.preventDefault();

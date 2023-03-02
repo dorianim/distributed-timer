@@ -1,3 +1,3 @@
-import { readable } from "svelte/store";
+import { readable } from 'svelte/store';
 
-export const API_URL = readable("http://131.159.218.193:3000");
+export const API_URL = readable('http://localhost:3000');
