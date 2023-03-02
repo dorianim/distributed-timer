@@ -54,6 +54,16 @@ async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerRequest>,
 ) -> Json<Timer> {
+    // Timer already exists
+    let mut redis = state.as_ref().redis.write().await;
+    let id_hash = generate_id(request.name.clone());
+    if redis.exists::<String, bool>(id_hash.clone()).unwrap() {
+        let timer: Timer =
+            serde_json::from_str(&redis.get::<String, String>(id_hash.clone()).unwrap()).unwrap();
+        return Json(timer);
+    }
+
+
     // Start password hash
     let password_hash_u8 = sha3_from_string(request.password);
     let id_hash = generate_id(request.name.clone());
