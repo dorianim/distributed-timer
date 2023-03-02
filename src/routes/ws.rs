@@ -108,6 +108,8 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
                 }
             }
         }
+
+        // Check if timer has been updated
         let mut redis = state.as_ref().redis.write().await;
         let update_nr: u64 = redis.get(format!("updated:{}", timer_id)).unwrap();
         if update_nr > last_update_nr {
