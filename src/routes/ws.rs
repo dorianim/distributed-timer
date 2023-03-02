@@ -7,8 +7,8 @@ use axum::{
     routing::get,
     Router,
 };
-use futures::SinkExt;
 use futures::StreamExt;
+use futures::{SinkExt};
 
 use serde::{Deserialize, Serialize};
 use serde_json;
@@ -47,65 +47,86 @@ pub async fn ws_handler(
 async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
     let (mut sender, mut receiver) = socket.split();
 
-    // receive command from the client
-    while let Some(Ok(msg)) = receiver.next().await {
-        if let Message::Text(msg) = msg {
-            println!("Received message: {:?}", msg);
-            let message: WSMessage = serde_json::from_str(&msg).unwrap();
+    let mut last_update_nr = 0;
+    let mut timer_id = String::new();
+    loop {
+        // receive command from the client
+        while let Some(Ok(msg)) = receiver.next().await {
+            if let Message::Text(msg) = msg {
+                println!("Received message: {:?}", msg);
+                let message: WSMessage = serde_json::from_str(&msg).unwrap();
 
-            match message.message_type.as_str() {
-                "command" => {
-                    match message.command.as_str() {
-                        "get_time" => {
-                            let start = SystemTime::now();
-                            let current_time = start
-                                .duration_since(UNIX_EPOCH)
-                                .expect("Time went backwards");
+                match message.message_type.as_str() {
+                    "command" => {
+                        match message.command.as_str() {
+                            "get_time" => {
+                                let start = SystemTime::now();
+                                let current_time = start
+                                    .duration_since(UNIX_EPOCH)
+                                    .expect("Time went backwards");
 
-                            let respone = WSMessage {
-                                message_type: "reply".into(),
-                                command: "get_time".into(),
-                                data: MessageData::Timestamp(current_time.as_millis()),
-                            };
+                                let respone = WSMessage {
+                                    message_type: "reply".into(),
+                                    command: "get_time".into(),
+                                    data: MessageData::Timestamp(current_time.as_millis()),
+                                };
 
-                            sender
-                                .send(serde_json::to_string(&respone).unwrap().into())
-                                .await
-                                .unwrap();
-                        }
-                        "hello" => {
-                            // Reply with Timer from timer_id
-                            let mut redis = state.as_ref().redis.write().await;
-                            let id: String = match message.data {
-                                MessageData::TimerId(id) => id,
-                                _ => "".into(),
-                            };
-                            let timer: String = redis.get::<String, String>(id).unwrap();
+                                sender
+                                    .send(serde_json::to_string(&respone).unwrap().into())
+                                    .await
+                                    .unwrap();
+                            }
+                            "hello" => {
+                                // Reply with Timer from timer_id
+                                let mut redis = state.as_ref().redis.write().await;
+                                let id: String = match message.data {
+                                    MessageData::TimerId(id) => id,
+                                    _ => "".into(),
+                                };
+                                timer_id = id.clone();
+                                let timer: String = redis.get::<String, String>(id).unwrap();
 
-                            let respone = WSMessage {
-                                message_type: "reply".into(),
-                                command: "hello".into(),
-                                data: MessageData::Timer(serde_json::from_str(&timer).unwrap()),
-                            };
+                                let respone = WSMessage {
+                                    message_type: "reply".into(),
+                                    command: "hello".into(),
+                                    data: MessageData::Timer(serde_json::from_str(&timer).unwrap()),
+                                };
 
-                            sender
-                                .send(serde_json::to_string(&respone).unwrap().into())
-                                .await
-                                .unwrap();
-                        }
-                        _ => {
-                            println!("Invalid command");
+                                sender
+                                    .send(serde_json::to_string(&respone).unwrap().into())
+                                    .await
+                                    .unwrap();
+                            }
+                            _ => {
+                                println!("Invalid command");
+                            }
                         }
                     }
-                }
-                _ => {
-                    sender.send("Invalid message type".into()).await.unwrap();
+                    _ => {
+                        sender.send("Invalid message type".into()).await.unwrap();
+                    }
                 }
             }
         }
-    }
 
-    println!("Client disconnected");
+        // Check if timer has been updated
+        let mut redis = state.as_ref().redis.write().await;
+        let update_nr: u64 = redis.get(format!("updated:{}", timer_id)).unwrap();
+        if update_nr > last_update_nr {
+            last_update_nr = update_nr;
+            let timer: String = redis.get::<String, String>(timer_id.clone()).unwrap();
+            let respone = WSMessage {
+                message_type: "push".into(),
+                command: "update".into(),
+                data: MessageData::Timer(serde_json::from_str(&timer).unwrap()),
+            };
+
+            sender
+                .send(serde_json::to_string(&respone).unwrap().into())
+                .await
+                .unwrap();
+        }
+    }
 }
 
 pub fn routes() -> Router<SharedState> {
