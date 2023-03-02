@@ -1,11 +1,11 @@
-use axum::{Router, http::{Request},response::{Response},};
+use axum::{http::Request, response::Response, Router};
 use serde::{Deserialize, Serialize};
 
-use std::{env, time::Duration};
 use std::sync::Arc;
+use std::{env, time::Duration};
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::{TraceLayer};
+use tower_http::trace::TraceLayer;
 use tracing::Span;
 mod routes;
 
@@ -19,27 +19,33 @@ pub struct Segment {
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Timer {
     // Return after TimerRequest
-    segments: Vec<Segment>,
-    name: String,
-    repeat: bool,
-    start_at: u64,
-    password: String,
-    id: String, // 5 random chars
+    pub segments: Vec<Segment>,
+    pub name: String,
+    pub repeat: bool,
+    pub start_at: u64,
+    pub password: String,
+    pub id: String, // 5 random chars
 }
 
 type SharedState = Arc<AppState>;
 pub struct AppState {
     redis: RwLock<redis::Connection>,
+    jwt_key: String,
 }
 
 #[tokio::main]
 async fn main() {
-    let cors = CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any);
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_headers(Any)
+        .allow_methods(Any);
 
     let client = redis::Client::open(env::var("REDIS_STRING").expect("REDIS_STRING is not set"));
+    let jwt_key = env::var("JWT_KEY").expect("JWT_KEY is not set");
 
     let state = Arc::new(AppState {
         redis: RwLock::new(client.unwrap().get_connection().unwrap()),
+        jwt_key,
     });
 
     //let state = SharedState::default();
@@ -54,8 +60,13 @@ async fn main() {
                     println!("Request {}", _request.uri());
                 })
                 .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
-                    println!("Response {}, {}ms", _response.status(), _latency.as_millis());
-                }))
+                    println!(
+                        "Response {}, {}ms",
+                        _response.status(),
+                        _latency.as_millis()
+                    );
+                }),
+        )
         .with_state(Arc::clone(&state));
 
     // run it with hyper on localhost:3000

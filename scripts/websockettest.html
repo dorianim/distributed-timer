@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WS Socket Test</title>
+</head>
+
+<body>
+
+</body>
+<script>
+    var socket = new WebSocket("ws://localhost:3000/api/ws");
+    socket.onopen = function (e) {
+        console.log("Connection established!");
+        socket.send(JSON.stringify({
+            "message_type": "command",
+            "command": "hello",
+            "data": "xR2uu"
+        }));
+    };
+
+    socket.onclose = function (event) {
+        if (event.wasClean) {
+            console.log(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+        } else {
+            // e.g. server process killed or network down
+            // event.code is usually 1006 in this case
+            console.log('[close] Connection died');
+        }
+    };
+
+    socket.onmessage = function (event) {
+        console.log(`[message] Data received from server: ${event.data}`);
+    };
+
+    socket.onerror = function (error) {
+        console.log(`[error]`);
+    };
+
+    setInterval(() => {
+        socket.send(JSON.stringify({
+            "message_type": "command",
+            "command": "get_time",
+            "data": "xR2uu"
+        }));
+    }, 1000);
+
+    // socket.send(JSON.stringify({
+    //     "message_type": "command",
+    //     "command": "get_time",
+    //     "data": "xR2uu"
+    // }));
+</script>
+
+</html>
