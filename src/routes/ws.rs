@@ -13,7 +13,7 @@ use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json;
 
-use redis::Commands;    
+use redis::Commands;
 
 use crate::SharedState;
 use crate::Timer;
@@ -60,11 +60,13 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
                             let current_time = start
                                 .duration_since(UNIX_EPOCH)
                                 .expect("Time went backwards");
+
                             let respone = WSMessage {
-                                message_type: "response".into(),
+                                message_type: "reply".into(),
                                 command: "get_time".into(),
                                 data: MessageData::Timestamp(current_time.as_millis()),
                             };
+
                             sender
                                 .send(serde_json::to_string(&respone).unwrap().into())
                                 .await
@@ -73,13 +75,12 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
                         "hello" => {
                             // Reply with Timer from timer_id
                             let mut redis = state.as_ref().redis.write().await;
-                            let id : String = match message.data {
+                            let id: String = match message.data {
                                 MessageData::TimerId(id) => id,
                                 _ => "".into(),
                             };
-                            let timer: String = 
-                                redis.get::<String, String>(id).unwrap();
-        
+                            let timer: String = redis.get::<String, String>(id).unwrap();
+
                             let respone = WSMessage {
                                 message_type: "reply".into(),
                                 command: "hello".into(),
@@ -100,16 +101,6 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
                     sender.send("Invalid message type".into()).await.unwrap();
                 }
             }
-        }
-    }
-
-    // send a message to the client
-    sender.send("Hello from the server".into()).await.unwrap();
-
-    // receive messages from the client
-    while let Some(Ok(msg)) = receiver.next().await {
-        if let Message::Text(msg) = msg {
-            println!("Received message: {:?}", msg);
         }
     }
 
