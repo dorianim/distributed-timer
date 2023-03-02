@@ -81,6 +81,11 @@ async fn create_timer(
         .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
         .unwrap();
 
+    // Set update id
+    redis
+        .set::<String, u32, ()>(String::from("updated:")  + &timer.id, 0)
+        .unwrap();
+
     Json(timer)
 }
 
@@ -118,6 +123,8 @@ async fn update_timer(
     redis
         .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
         .unwrap();
+
+    redis.incr::<String, u32, ()>(String::from("updated:") + &timer.id, 1).unwrap();
     StatusCode::OK
 }
 
