@@ -1,11 +1,18 @@
 use crate::SharedState;
 use crate::{Segment, Timer};
+use axum::body::{Body, BoxBody};
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{request, Request, StatusCode};
+use axum::middleware::Next;
+use axum::response::Response;
 use axum::routing::{get, post};
 use axum::Router;
-use axum::{response::IntoResponse, Json};
-use jsonwebtoken::{decode, encode, Algorithm, EncodingKey, Header};
+use axum::{
+    headers::authorization::{Authorization, Bearer},
+    response::IntoResponse,
+    Json, TypedHeader,
+};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use redis::Commands;
 use serde::{Deserialize, Serialize};
 use sha3::Digest;
@@ -45,6 +52,66 @@ struct TimerRequest {
     start_at: u64,
 }
 
+#[derive(Serialize, Deserialize)]
+struct TokenRequest {
+    id: String,
+    password: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Claims {
+    id: String,
+}
+
+async fn auth_middleware<B>(request: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
+    let auth = request
+        .headers()
+        .get("authorization")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    let auth = auth.split(" ").collect::<Vec<&str>>()[1];
+    let token = decode::<Claims>(
+        auth,
+        &DecodingKey::from_secret("secret".as_ref()),
+        &Validation::default(),
+    );
+
+    if !token.is_ok()
+        || request.uri().to_string() != format!("/api/timer/{}", token.unwrap().claims.id)
+    {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    Ok(next.run(request).await)
+}
+
+async fn create_token(
+    State(state): State<SharedState>,
+    Json(request): Json<TokenRequest>,
+) -> Result<String, StatusCode> {
+    // Check Password from ID
+    let mut redis = state.as_ref().redis.write().await;
+    let pw_hash = generate_id(request.password.clone());
+    let timer: Timer =
+        serde_json::from_str(&redis.get::<String, String>(request.id.clone()).unwrap()).unwrap();
+    if pw_hash != timer.password {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    let my_claims = Claims {
+        id: request.id.clone(),
+    };
+
+    let token = encode(
+        &Header::default(),
+        &my_claims,
+        &EncodingKey::from_secret("secret".as_ref()),
+    )
+    .unwrap();
+
+    Ok(token)
+}
+
 fn sha3_from_string(string: String) -> Vec<u8> {
     let mut hasher = Sha3_256::new();
     hasher.update(string);
@@ -64,14 +131,12 @@ fn generate_id(name: String) -> String {
 async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerRequest>,
-) -> Json<TimerResponse> {
+) -> Result<Json<TimerResponse>, StatusCode> {
     // Timer already exists
     let mut redis = state.as_ref().redis.write().await;
     let id_hash = generate_id(request.name.clone());
     if redis.exists::<String, bool>(id_hash.clone()).unwrap() {
-        let timer: TimerResponse =
-            serde_json::from_str(&redis.get::<String, String>(id_hash.clone()).unwrap()).unwrap();
-        return Json(timer);
+        return Err(StatusCode::CONFLICT);
     }
 
     let password_hash_u8 = sha3_from_string(request.password);
@@ -102,7 +167,7 @@ async fn create_timer(
         id: timer.id,
     };
 
-    Json(timer_response)
+    Ok(Json(timer_response))
 }
 
 async fn get_timer(

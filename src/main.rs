@@ -30,6 +30,7 @@ pub struct Timer {
 type SharedState = Arc<AppState>;
 pub struct AppState {
     redis: RwLock<redis::Connection>,
+    jwt_key: String,
 }
 
 #[tokio::main]
@@ -40,9 +41,11 @@ async fn main() {
         .allow_methods(Any);
 
     let client = redis::Client::open(env::var("REDIS_STRING").expect("REDIS_STRING is not set"));
+    let jwt_key = env::var("JWT_KEY").expect("JWT_KEY is not set");
 
     let state = Arc::new(AppState {
         redis: RwLock::new(client.unwrap().get_connection().unwrap()),
+        jwt_key,
     });
 
     //let state = SharedState::default();
