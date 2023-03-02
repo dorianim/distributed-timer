@@ -36,10 +36,13 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@fortawesome/free-brands-svg-icons": "^6.3.0",
+		"@fortawesome/free-solid-svg-icons": "^6.3.0",
 		"@tailwindcss/forms": "^0.5.3",
 		"screenfull": "^6.0.2",
 		"socket.io": "^4.6.1",
 		"socket.io-client": "^4.6.1",
+		"svelte-fa": "^3.0.3",
 		"tone": "^14.7.77"
 	}
 }

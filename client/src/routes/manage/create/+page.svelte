@@ -1,40 +1,22 @@
 <script lang="ts">
+	import { ProgressRadial } from '@skeletonlabs/skeleton';
 	import { get } from 'svelte/store';
 	import { API_URL } from '../../../stores';
 	import type { TimerCreationRequest } from '../../../types/timer';
 	import type { PageData } from './$types';
+	import CreateTimerForm from './CreateTimerForm.svelte';
+	import Fa from 'svelte-fa';
+	import { faClose, faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
+	import { goto } from '$app/navigation';
 
 	export let data: PageData;
-	let result: Promise<string | void>;
 	const { fetch } = data;
+	let submitResult: Promise<string> | undefined;
 
-	const createTimer = (e: Event) => {
-		e.preventDefault();
-		if (!e.target) return Promise.reject('');
-		const form = new FormData(e.target as HTMLFormElement);
-
-		const timer: TimerCreationRequest = {
-			name: form.get('name') as string,
-			password: form.get('password') as string,
-			repeat: true,
-			start_at: new Date().getTime(),
-			segments: [
-				{
-					label: 'Change',
-					time: 15000,
-					sound: false
-				},
-				{
-					label: 'Boulder',
-					time: 240000,
-					sound: true
-				}
-			]
-		};
-
-		result = fetch(`${get(API_URL)}/api/timer`, {
+	const onSubmit = (timerData: TimerCreationRequest) => {
+		submitResult = fetch(`${get(API_URL)}/api/timer`, {
 			method: 'POST',
-			body: JSON.stringify(timer),
+			body: JSON.stringify(timerData),
 			headers: {
 				'Content-Type': 'application/json'
 			}
@@ -42,51 +24,49 @@
 			.then((res) => res.json())
 			.then((data) => {
 				console.log(data);
+				return data.id;
 			});
 	};
 </script>
 
-<div class="m-auto items-center grid gap-10 pt-10 p-4">
-	<h2 class="text-center">Create timer</h2>
+<h2 class="text-center">Create timer</h2>
 
-	<div class="card p-4 md:w-[50%] m-auto">
-		{#await result}
-			<div>loading...</div>
-		{:then result}
-			<div>res: {result}</div>
-		{:catch error}
-			<div>err: {error}</div>
-		{/await}
-		<form class="grid gap-3" on:submit={createTimer}>
-			<label class="label">
-				<span>Enter a name for your timer:</span>
-				<input
-					class="input variant-form-material"
-					type="text"
-					placeholder="timer name"
-					required
-					pattern="[a-z0-9-_]*"
-					name="name"
-				/>
-			</label>
+<div class="p-4 md:w-[80%] m-auto items-center">
+	{#await submitResult}
+		<div class="flex items-center justify-center">
+			<ProgressRadial class="w-10" />
+		</div>
+	{:then result}
+		{#if result}
+			<aside class="alert variant-ghost-success mb-4 p-2 pl-4">
+				<Fa icon={faCircleCheck} class="text-2xl" />
+				<h3 class="alert-message">Success</h3>
+				<button
+					class="btn variant-filled-success"
+					on:click={() => {
+						goto(`/manage/${result}`);
+					}}>Manage timer</button
+				>
+			</aside>
+		{:else}
+			<CreateTimerForm {onSubmit} />
+		{/if}
+	{:catch error}
+		<aside class="alert variant-ghost-error mb-4 p-2 pl-4">
+			<Fa icon={faCircleExclamation} class="text-2xl" />
+			<h3 class="alert-message">Error: {error}</h3>
+			<button
+				class="btn-icon"
+				on:click={() => {
+					submitResult = undefined;
+				}}><Fa icon={faClose} /></button
+			>
+		</aside>
+		<CreateTimerForm {onSubmit} />
+	{/await}
+</div>
 
-			<label class="label">
-				<span>Enter a password to access your timer later:</span>
-				<input
-					class="input variant-form-material"
-					type="password"
-					placeholder="timer password"
-					name="password"
-					required
-				/>
-			</label>
-
-			<button class="btn variant-filled-primary">Submit</button>
-		</form>
-	</div>
-
-	<div class="md:w-[50%] m-auto text-center">
-		Alternatively, you can <a href="/">view an existing timer</a> or
-		<a href="/manage/login">manage an existing timer</a>
-	</div>
+<div class="md:w-[50%] m-auto text-center">
+	Alternatively, you can <a href="/">view an existing timer</a> or
+	<a href="/manage/login">manage an existing timer</a>
 </div>

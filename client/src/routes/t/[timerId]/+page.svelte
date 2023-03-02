@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Modal, type ModalSettings, modalStore } from '@skeletonlabs/skeleton';
+	import { Modal, type ModalSettings, modalStore, ProgressRadial } from '@skeletonlabs/skeleton';
 	import * as Tone from 'tone';
 	import type { PageData } from './$types';
 	import { get } from 'svelte/store';
@@ -72,7 +72,7 @@
 				timerData = data.data;
 			}
 		} else if (data.message_type === 'push') {
-			if (data.event === 'timer') {
+			if (data.command === 'update') {
 				timerData = data.data;
 			}
 		}
@@ -85,7 +85,7 @@
 	Tone.start().then(() => (soundEnabled = true));
 
 	$: {
-		if (!soundEnabled && get(modalStore).length == 0) {
+		if (timerData && !soundEnabled && get(modalStore).length == 0) {
 			const d: ModalSettings = {
 				type: 'alert',
 				body: 'Tap anywhere to enable sound',
@@ -109,6 +109,12 @@
 
 {#if timerData && timeOffset}
 	<Timer {timerData} {soundEnabled} {timeOffset} />
+{:else}
+	<div
+		class="absolute top-0 h-[100vh] left-[50%] translate-x-[-50%] flex items-center justify-center"
+	>
+		<ProgressRadial class="w-10" />
+	</div>
 {/if}
 
 <div
