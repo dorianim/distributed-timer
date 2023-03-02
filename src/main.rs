@@ -34,7 +34,7 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() {
-    let cors = CorsLayer::new().allow_origin(Any).allow_headers(Any);
+    let cors = CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any);
 
     let client = redis::Client::open(env::var("REDIS_STRING").expect("REDIS_STRING is not set"));
 
