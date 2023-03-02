@@ -16,12 +16,24 @@ const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                              0123456789";
 
 #[derive(Serialize, Deserialize)]
-struct TimerResponse {
-    segments: Vec<Segment>,
-    name: String,
-    repeat: bool,
-    start_at: u64,
-    id: String,
+pub struct TimerResponse {
+    pub segments: Vec<Segment>,
+    pub name: String,
+    pub repeat: bool,
+    pub start_at: u64,
+    pub id: String,
+}
+
+impl Into<TimerResponse> for Timer {
+    fn into(self) -> TimerResponse {
+        TimerResponse {
+            segments: self.segments,
+            name: self.name,
+            repeat: self.repeat,
+            start_at: self.start_at,
+            id: self.id,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -53,18 +65,17 @@ fn generate_id(name: String) -> String {
 async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerRequest>,
-) -> Json<Timer> {
+) -> Json<TimerResponse> {
     // Timer already exists
     let mut redis = state.as_ref().redis.write().await;
     let id_hash = generate_id(request.name.clone());
     if redis.exists::<String, bool>(id_hash.clone()).unwrap() {
-        let timer: Timer =
+        let timer: TimerResponse =
             serde_json::from_str(&redis.get::<String, String>(id_hash.clone()).unwrap()).unwrap();
         return Json(timer);
     }
 
 
-    // Start password hash
     let password_hash_u8 = sha3_from_string(request.password);
     let id_hash = generate_id(request.name.clone());
     let timer = Timer {
@@ -85,7 +96,15 @@ async fn create_timer(
         .set::<String, u32, ()>(String::from("updated:")  + &timer.id, 0)
         .unwrap();
 
-    Json(timer)
+    let timer_response = TimerResponse {
+        segments: timer.segments,
+        name: timer.name,
+        repeat: timer.repeat,
+        start_at: timer.start_at,
+        id: timer.id,
+    };
+
+    Json(timer_response)
 }
 
 async fn get_timer(

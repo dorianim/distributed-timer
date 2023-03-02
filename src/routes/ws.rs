@@ -16,7 +16,7 @@ use serde_json;
 use redis::Commands;
 
 use crate::SharedState;
-use crate::Timer;
+use crate::{Timer};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -49,9 +49,7 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
 
     let mut last_update_nr: i32 = -1;
     let mut timer_id = String::new();
-    let mut iterations = 0;
     loop {
-        println!("Iteration: {}", iterations);
         // check if message is available
         let msg = receiver.next().await;
         if !msg.is_none() {
@@ -88,15 +86,15 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
                                         _ => "".into(),
                                     };
                                     timer_id = id.clone();
-                                    let timer: String =
-                                        redis.get::<String, String>(id.clone()).unwrap();
+                                    let timer: Timer = serde_json::from_str(&redis.get::<String, String>(id.clone()).unwrap()).unwrap();
+        
                                     last_update_nr = redis.get(format!("updated:{}", id)).unwrap();
 
                                     let respone = WSMessage {
                                         message_type: "reply".into(),
                                         command: "hello".into(),
                                         data: MessageData::Timer(
-                                            serde_json::from_str(&timer).unwrap(),
+                                            timer.into()
                                         ),
                                     };
 
@@ -122,17 +120,17 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         // Check if timer has been updated
-        if (iterations == 0) && !timer_id.is_empty() {
+        if !timer_id.is_empty() {
             let mut redis = state.as_ref().redis.write().await;
             let update_nr: i32 = redis.get(format!("updated:{}", timer_id)).unwrap();
             if update_nr > last_update_nr {
                 println!("Timer has been updated");
                 last_update_nr = update_nr;
-                let timer: String = redis.get::<String, String>(timer_id.clone()).unwrap();
+                let timer: Timer = serde_json::from_str(&redis.get::<String, String>(timer_id.clone()).unwrap()).unwrap();
                 let respone = WSMessage {
                     message_type: "push".into(),
                     command: "update".into(),
-                    data: MessageData::Timer(serde_json::from_str(&timer).unwrap()),
+                    data: MessageData::Timer(timer.into()),
                 };
 
                 sender
@@ -141,8 +139,6 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
                     .unwrap();
             }
         }
-
-        iterations = (iterations + 1) % 10;
     }
 }
 

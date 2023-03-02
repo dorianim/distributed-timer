@@ -19,12 +19,12 @@ pub struct Segment {
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub struct Timer {
     // Return after TimerRequest
-    segments: Vec<Segment>,
-    name: String,
-    repeat: bool,
-    start_at: u64,
-    password: String,
-    id: String, // 5 random chars
+    pub segments: Vec<Segment>,
+    pub name: String,
+    pub repeat: bool,
+    pub start_at: u64,
+    pub password: String,
+    pub id: String, // 5 random chars
 }
 
 type SharedState = Arc<AppState>;
