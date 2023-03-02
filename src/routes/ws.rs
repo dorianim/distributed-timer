@@ -16,7 +16,7 @@ use serde_json;
 use redis::Commands;
 
 use crate::SharedState;
-use crate::{Timer};
+use crate::Timer;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -86,16 +86,17 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
                                         _ => "".into(),
                                     };
                                     timer_id = id.clone();
-                                    let timer: Timer = serde_json::from_str(&redis.get::<String, String>(id.clone()).unwrap()).unwrap();
-        
+                                    let timer: Timer = serde_json::from_str(
+                                        &redis.get::<String, String>(id.clone()).unwrap(),
+                                    )
+                                    .unwrap();
+
                                     last_update_nr = redis.get(format!("updated:{}", id)).unwrap();
 
                                     let respone = WSMessage {
                                         message_type: "reply".into(),
                                         command: "hello".into(),
-                                        data: MessageData::Timer(
-                                            timer.into()
-                                        ),
+                                        data: MessageData::Timer(timer.into()),
                                     };
 
                                     sender
@@ -126,7 +127,9 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
             if update_nr > last_update_nr {
                 println!("Timer has been updated");
                 last_update_nr = update_nr;
-                let timer: Timer = serde_json::from_str(&redis.get::<String, String>(timer_id.clone()).unwrap()).unwrap();
+                let timer: Timer =
+                    serde_json::from_str(&redis.get::<String, String>(timer_id.clone()).unwrap())
+                        .unwrap();
                 let respone = WSMessage {
                     message_type: "push".into(),
                     command: "update".into(),

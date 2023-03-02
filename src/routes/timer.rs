@@ -5,6 +5,7 @@ use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::Router;
 use axum::{response::IntoResponse, Json};
+use jsonwebtoken::{decode, encode, Algorithm, EncodingKey, Header};
 use redis::Commands;
 use serde::{Deserialize, Serialize};
 use sha3::Digest;
@@ -73,7 +74,6 @@ async fn create_timer(
         return Json(timer);
     }
 
-
     let password_hash_u8 = sha3_from_string(request.password);
     let id_hash = generate_id(request.name.clone());
     let timer = Timer {
@@ -91,7 +91,7 @@ async fn create_timer(
 
     // Set update id
     redis
-        .set::<String, u32, ()>(String::from("updated:")  + &timer.id, 0)
+        .set::<String, u32, ()>(String::from("updated:") + &timer.id, 0)
         .unwrap();
 
     let timer_response = TimerResponse {
@@ -140,18 +140,24 @@ async fn update_timer(
         .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
         .unwrap();
 
-    redis.incr::<String, u32, ()>(String::from("updated:") + &timer.id, 1).unwrap();
+    redis
+        .incr::<String, u32, ()>(String::from("updated:") + &timer.id, 1)
+        .unwrap();
     StatusCode::OK
 }
 
-async fn delete_timer(State(state): State<SharedState>, Path(id) : Path<String>) -> impl IntoResponse {
+async fn delete_timer(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
     let mut redis = state.as_ref().redis.write().await;
     redis.del::<String, ()>(id).unwrap();
     StatusCode::OK
 }
 
 pub fn routes() -> Router<SharedState> {
-    Router::new()
-        .route("/", post(create_timer))
-        .route("/:id", get(get_timer).put(update_timer).delete(delete_timer))
+    Router::new().route("/", post(create_timer)).route(
+        "/:id",
+        get(get_timer).put(update_timer).delete(delete_timer),
+    )
 }

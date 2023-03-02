@@ -1,11 +1,11 @@
-use axum::{Router, http::{Request},response::{Response},};
+use axum::{http::Request, response::Response, Router};
 use serde::{Deserialize, Serialize};
 
-use std::{env, time::Duration};
 use std::sync::Arc;
+use std::{env, time::Duration};
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::{TraceLayer};
+use tower_http::trace::TraceLayer;
 use tracing::Span;
 mod routes;
 
@@ -34,7 +34,10 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() {
-    let cors = CorsLayer::new().allow_origin(Any).allow_headers(Any).allow_methods(Any);
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_headers(Any)
+        .allow_methods(Any);
 
     let client = redis::Client::open(env::var("REDIS_STRING").expect("REDIS_STRING is not set"));
 
@@ -54,8 +57,13 @@ async fn main() {
                     println!("Request {}", _request.uri());
                 })
                 .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
-                    println!("Response {}, {}ms", _response.status(), _latency.as_millis());
-                }))
+                    println!(
+                        "Response {}, {}ms",
+                        _response.status(),
+                        _latency.as_millis()
+                    );
+                }),
+        )
         .with_state(Arc::clone(&state));
 
     // run it with hyper on localhost:3000
