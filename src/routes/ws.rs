@@ -21,6 +21,7 @@ use crate::Timer;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize, Deserialize)]
+#[serde(untagged)]
 enum MessageData {
     Timestamp(u128),
     Timer(Timer),
