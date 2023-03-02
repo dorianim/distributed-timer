@@ -111,12 +111,14 @@ async fn update_timer(
     StatusCode::OK
 }
 
-async fn delete_timer(State(state): State<SharedState>) -> impl IntoResponse {
-    String::from("Not Implemented")
+async fn delete_timer(State(state): State<SharedState>, Path(id) : Path<String>) -> impl IntoResponse {
+    let mut redis = state.as_ref().redis.write().await;
+    redis.del::<String, ()>(id).unwrap();
+    StatusCode::OK
 }
 
 pub fn routes() -> Router<SharedState> {
     Router::new()
-        .route("/", post(create_timer).delete(delete_timer))
-        .route("/:id", get(get_timer).put(update_timer))
+        .route("/", post(create_timer))
+        .route("/:id", get(get_timer).put(update_timer).delete(delete_timer))
 }
