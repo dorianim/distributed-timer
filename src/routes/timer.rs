@@ -76,7 +76,6 @@ async fn create_timer(
         id: id_hash,
     };
 
-    let mut redis = state.as_ref().redis.write().await;
     redis
         .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
         .unwrap();
