@@ -11,9 +11,7 @@ use sha3::Digest;
 use sha3::Sha3_256;
 use std::str;
 
-const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
-                             abcdefghijklmnopqrstuvwxyz\
-                             0123456789";
+const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 #[derive(Serialize, Deserialize)]
 pub struct TimerResponse {
@@ -57,7 +55,7 @@ fn generate_id(name: String) -> String {
     let id_hash_u8: Vec<u8> = sha3_from_string(name);
     let mut id_hash = String::new();
     for i in 0..5 {
-        id_hash.push(ALPHANUMERIC[(id_hash_u8[i] as usize) % 62] as char);
+        id_hash.push(ALPHANUMERIC[(id_hash_u8[i] as usize) % 26] as char);
     }
     id_hash
 }
@@ -121,7 +119,7 @@ async fn update_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(request): Json<TimerRequest>,
-) -> StatusCode {
+) -> impl IntoResponse {
     let mut redis = state.as_ref().redis.write().await;
     let password_hash_u8 = sha3_from_string(request.password);
 
