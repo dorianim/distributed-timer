@@ -1,11 +1,12 @@
-use axum::Router;
+use axum::{Router, http::{Request},response::{Response},};
 use serde::{Deserialize, Serialize};
 
-use std::env;
+use std::{env, time::Duration};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
-
+use tower_http::trace::{TraceLayer};
+use tracing::Span;
 mod routes;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -47,6 +48,14 @@ async fn main() {
         .nest("/api/ws", routes::ws::routes())
         .nest("/api/timer", routes::timer::routes())
         .layer(cors)
+        .layer(
+            TraceLayer::new_for_http()
+                .on_request(|_request: &Request<_>, _span: &Span| {
+                    println!("Request {}", _request.uri());
+                })
+                .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
+                    println!("Response {}, {}ms", _response.status(), _latency.as_millis());
+                }))
         .with_state(Arc::clone(&state));
 
     // run it with hyper on localhost:3000

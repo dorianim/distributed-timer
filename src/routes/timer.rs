@@ -54,6 +54,16 @@ async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerRequest>,
 ) -> Json<Timer> {
+    // Timer already exists
+    let mut redis = state.as_ref().redis.write().await;
+    let id_hash = generate_id(request.name.clone());
+    if redis.exists::<String, bool>(id_hash.clone()).unwrap() {
+        let timer: Timer =
+            serde_json::from_str(&redis.get::<String, String>(id_hash.clone()).unwrap()).unwrap();
+        return Json(timer);
+    }
+
+
     // Start password hash
     let password_hash_u8 = sha3_from_string(request.password);
     let id_hash = generate_id(request.name.clone());
@@ -111,12 +121,14 @@ async fn update_timer(
     StatusCode::OK
 }
 
-async fn delete_timer(State(state): State<SharedState>) -> impl IntoResponse {
-    String::from("Not Implemented")
+async fn delete_timer(State(state): State<SharedState>, Path(id) : Path<String>) -> impl IntoResponse {
+    let mut redis = state.as_ref().redis.write().await;
+    redis.del::<String, ()>(id).unwrap();
+    StatusCode::OK
 }
 
 pub fn routes() -> Router<SharedState> {
     Router::new()
-        .route("/", post(create_timer).delete(delete_timer))
-        .route("/:id", get(get_timer).put(update_timer))
+        .route("/", post(create_timer))
+        .route("/:id", get(get_timer).put(update_timer).delete(delete_timer))
 }
