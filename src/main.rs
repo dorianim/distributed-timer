@@ -8,7 +8,7 @@ use tower_http::trace::TraceLayer;
 use tracing::Span;
 mod routes;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Segment {
     label: String,
     time: u32,
@@ -29,8 +29,8 @@ pub struct Timer {
 type SharedState = Arc<AppState>;
 pub struct AppState {
     redis: redis::aio::ConnectionManager,
+    redis_client: redis::Client,
     jwt_key: String,
-    redis_string: String,
 }
 
 #[tokio::main]
@@ -43,15 +43,15 @@ async fn main() {
     let redis_string = env::var("REDIS_STRING").expect("REDIS_STRING is not set");
     let jwt_key = env::var("JWT_KEY").expect("JWT_KEY is not set");
     let client = redis::Client::open(redis_string.to_owned()).unwrap();
-    let manager = redis::aio::ConnectionManager::new(client).await.unwrap();
+    let manager = redis::aio::ConnectionManager::new(client.clone())
+        .await
+        .unwrap();
 
     let state = Arc::new(AppState {
         redis: manager,
+        redis_client: client,
         jwt_key,
-        redis_string,
     });
-
-    //let state = SharedState::default();
 
     let app = Router::new()
         .nest("/api/ws", routes::ws::routes())

@@ -21,7 +21,7 @@ use std::str;
 
 const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TimerResponse {
     pub segments: Vec<Segment>,
     pub name: String,
