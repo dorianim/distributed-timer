@@ -23,12 +23,14 @@ use crate::Timer;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::timer::TimerResponse;
+
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 enum WSMessage {
     Hello(String),
     GetTime,
-    Timer(Timer),
+    Timer(TimerResponse),
     Timestamp(u128),
     Error(String),
 }
