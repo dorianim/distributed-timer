@@ -23,7 +23,8 @@
 	let formData: TimerFormData;
 	let useCurrentTime: boolean = true;
 
-	const handleSubmit = () => {
+	const handleSubmit = (e: Event) => {
+		e.preventDefault();
 		console.log('submit');
 		onSubmit(formDataToTimerData(formData));
 	};
