@@ -35,15 +35,6 @@ enum WSMessage {
     Error(String),
 }
 
-pub async fn ws_handler(
-    State(state): State<SharedState>,
-    ws: WebSocketUpgrade,
-) -> impl IntoResponse {
-    // finalize the upgrade process by returning upgrade callback.
-    // we can customize the callback by sending additional info such as address.
-    ws.on_upgrade(move |socket| handle_socket(State(state), socket))
-}
-
 struct WsConnection {
     sender: SplitSink<WebSocket, Message>,
     receiver: SplitStream<WebSocket>,
@@ -145,6 +136,13 @@ async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
     let mut connection = WsConnection::new(state, socket);
 
     connection.listen().await;
+}
+
+pub async fn ws_handler(
+    State(state): State<SharedState>,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_socket(State(state), socket))
 }
 
 pub fn routes() -> Router<SharedState> {
