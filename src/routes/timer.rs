@@ -92,7 +92,7 @@ async fn create_token(
 ) -> Result<String, StatusCode> {
     // Check Password from ID
     let mut redis = state.as_ref().redis.clone();
-    let pw_hash = generate_id(request.password.clone());
+    let pw_hash = hex::encode(sha3_from_string(request.password.clone()));
     let timer: Timer = serde_json::from_str(
         &redis
             .get::<String, String>(request.id.clone())
@@ -230,7 +230,7 @@ async fn delete_timer(
 }
 
 pub fn routes() -> Router<SharedState> {
-    Router::new().route("/", post(create_timer)).route(
+    Router::new().route("/token", post(create_token)).route("/", post(create_timer)).route(
         "/:id",
         get(get_timer).put(update_timer).delete(delete_timer),
     )
