@@ -45,7 +45,13 @@
 			<ProgressRadial class="w-10" />
 		</div>
 	{:then result}
-		<LoginForm {onSubmit} />
+		{#if result}
+			<div class="flex items-center justify-center">
+				<ProgressRadial class="w-10" />
+			</div>
+		{:else}
+			<LoginForm {onSubmit} />
+		{/if}
 	{:catch error}
 		<aside class="alert variant-ghost-error mb-4 p-2 pl-4">
 			<Fa icon={faCircleExclamation} class="text-2xl" />

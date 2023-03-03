@@ -9,19 +9,14 @@
 	import Fa from 'svelte-fa';
 	import { faClose, faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 	import type TimerFormData from './TimerForm.svelte';
+	import { goto } from '$app/navigation';
 
 	export let data: PageData;
 	let { timerData } = data;
 	let submitResult: Promise<Response> | undefined;
-	let useCurrentTime: boolean = true;
-	let start_at = new Date(timerData.start_at).toISOString().slice(0, 16);
 
 	$: {
-		console.log(timerData);
-	}
-
-	$: {
-		if (useCurrentTime) start_at = new Date().toISOString().slice(0, 16);
+		if (!localStorage.getItem('token')) goto('/manage/login');
 	}
 
 	const onSubmit = async (newTimerData: Timer) => {
@@ -31,14 +26,14 @@
 			method: 'PUT',
 			body: JSON.stringify({ password: 'test', ...newTimerData }),
 			headers: {
-				'Content-Type': 'application/json'
+				'Content-Type': 'application/json',
+				Autorization: `Bearer ${localStorage.getItem('token')}`
 			}
 		}).then((res) => {
-			if (res.status === 200) {
-				return res;
-			} else {
+			if (res.status !== 200) {
 				throw new Error('Something went wrong');
 			}
+			return res;
 		});
 	};
 </script>
