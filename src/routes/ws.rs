@@ -69,9 +69,10 @@ impl WsConnection {
             pubsub,
         );
 
-        ws_sender_task.await.unwrap();
         ws_receiver_task.await.unwrap();
-        redis_listener_task.await.unwrap();
+
+        ws_sender_task.abort();
+        redis_listener_task.abort();
     }
 
     fn spawn_redis_listener_task(
