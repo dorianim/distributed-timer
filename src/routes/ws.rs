@@ -161,9 +161,8 @@ impl WsMessageHandler {
     }
 
     async fn listen(&mut self) {
-        loop {
-            let msg = self.ws_receiver.next().await;
-            if let Some(Ok(Message::Text(msg))) = msg {
+        while let Some(msg) = self.ws_receiver.next().await {
+            if let Ok(Message::Text(msg)) = msg {
                 println!("Received message: {:?}", msg);
                 let message: WSMessage = serde_json::from_str(&msg).unwrap();
                 let response = self.handle_message(message).await;
