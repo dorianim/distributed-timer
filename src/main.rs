@@ -36,6 +36,7 @@ pub struct AppState {
 #[tokio::main]
 async fn main() {
     let cors = CorsLayer::new()
+        .allow_origin(Any)
         .allow_headers(Any)
         .allow_methods(Any);
 
