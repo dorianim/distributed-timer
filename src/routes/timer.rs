@@ -3,9 +3,9 @@ use crate::{Segment, Timer};
 use axum::body::{Body, BoxBody};
 use axum::extract::{Path, State};
 use axum::http::{request, Request, StatusCode};
-use axum::middleware::Next;
+use axum::middleware::{Next, self};
 use axum::response::Response;
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use axum::Router;
 use axum::{
     headers::authorization::{Authorization, Bearer},
@@ -58,9 +58,10 @@ struct TokenRequest {
     password: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Claims {
     id: String,
+    exp: usize,
 }
 
 async fn auth_middleware<B>(request: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
@@ -76,9 +77,7 @@ async fn auth_middleware<B>(request: Request<B>, next: Next<B>) -> Result<Respon
         &DecodingKey::from_secret("secret".as_ref()),
         &Validation::default(),
     );
-
-    if !token.is_ok()
-        || request.uri().to_string() != format!("/api/timer/{}", token.unwrap().claims.id)
+    if token.is_err() || request.uri().to_string() != format!("/{}", token.unwrap().claims.id)
     {
         return Err(StatusCode::UNAUTHORIZED);
     }
@@ -105,6 +104,7 @@ async fn create_token(
     }
     let my_claims = Claims {
         id: request.id.clone(),
+        exp: 13847470436348788,
     };
 
     let token = encode(
@@ -230,8 +230,8 @@ async fn delete_timer(
 }
 
 pub fn routes() -> Router<SharedState> {
-    Router::new().route("/token", post(create_token)).route("/", post(create_timer)).route(
+    Router::new().route("/:id", put(update_timer)).layer(middleware::from_fn(auth_middleware)).route("/token", post(create_token)).route("/", post(create_timer)).route(
         "/:id",
-        get(get_timer).put(update_timer).delete(delete_timer),
+        get(get_timer).delete(delete_timer),
     )
 }
