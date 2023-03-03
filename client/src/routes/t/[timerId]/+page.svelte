@@ -18,13 +18,11 @@
 	const socket = new WebSocket('ws://localhost:3000/api/ws');
 	// Connection opened
 	socket.addEventListener('open', (event) => {
-		socket.send(
-			JSON.stringify({ command: 'hello', data: data.params.timerId, message_type: 'command' })
-		);
+		socket.send(JSON.stringify({ data: data.params.timerId, type: 'Hello' }));
 
 		setInterval(() => {
 			lastGetTimeSent = performance.now();
-			socket.send(JSON.stringify({ command: 'get_time', data: '', message_type: 'command' }));
+			socket.send(JSON.stringify({ type: 'GetTime' }));
 		}, 1000);
 	});
 
@@ -62,19 +60,15 @@
 	socket.addEventListener('message', (event) => {
 		const data = JSON.parse(event.data);
 		console.log(data);
-		if (data.message_type === 'reply') {
-			if (data.command === 'get_time') {
+		switch (data.type) {
+			case 'Timer':
+				timerData = data.data;
+				break;
+			case 'Timestamp':
 				const now = performance.now();
 				const getTimeRoundTrip = now - lastGetTimeSent;
 				timeOffset = data.data + getTimeRoundTrip / 2 - now;
 				handleNewOffset(timeOffset);
-			} else if (data.command === 'hello') {
-				timerData = data.data;
-			}
-		} else if (data.message_type === 'push') {
-			if (data.command === 'update') {
-				timerData = data.data;
-			}
 		}
 	});
 
