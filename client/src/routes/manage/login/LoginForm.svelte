@@ -13,13 +13,12 @@
 
 <form class="grid gap-3" on:submit={handleSubmit}>
 	<label class="label">
-		<span>Enter a name of your timer:</span>
+		<span>Enter the id of your timer:</span>
 		<input
 			class="input variant-form-material"
 			type="text"
-			placeholder="timer name"
+			placeholder="timer id"
 			required
-			pattern="[a-z0-9-_]*"
 			name="name"
 		/>
 	</label>

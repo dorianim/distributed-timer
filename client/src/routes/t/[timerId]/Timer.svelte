@@ -58,12 +58,16 @@
 		const currentTime = performance.now() + timeOffset;
 		const elapsedTime = currentTime - timerData.start_at;
 
-		const totalTimePerRound = timerData.segments.reduce((acc, curr) => acc + curr.time, 0);
+		const segments = timerData.segments.map((segment) => ({
+			...segment,
+			time: segment.time + 1000
+		}));
+		const totalTimePerRound = segments.reduce((acc, curr) => acc + curr.time, 0);
 
 		if (!timerData.repeat && elapsedTime > totalTimePerRound) {
 			return {
 				timerText: getTimerText(0),
-				label: timerData.segments[timerData.segments.length - 1].label,
+				label: segments[segments.length - 1].label,
 				seconds: 0
 			};
 		}
@@ -73,12 +77,19 @@
 		let currentSegmentIndex = 0;
 		let timeInCurrentSegment = 0;
 		while (timeInCurrentRound > 0) {
-			timeInCurrentSegment = timerData.segments[currentSegmentIndex].time - timeInCurrentRound;
-			timeInCurrentRound -= timerData.segments[currentSegmentIndex].time;
+			timeInCurrentSegment = segments[currentSegmentIndex].time - timeInCurrentRound;
+			timeInCurrentRound -= segments[currentSegmentIndex].time;
 			currentSegmentIndex++;
 		}
 
-		const currentSegment = timerData.segments[currentSegmentIndex - 1];
+		const currentSegment = segments[currentSegmentIndex - 1];
+
+		if (
+			currentSegment.sound &&
+			Math.floor(timeInCurrentSegment / 1000) == Math.floor((currentSegment.time - 1) / 1000)
+		) {
+			playBeep();
+		}
 
 		if (currentSegment.sound && Math.floor(timeInCurrentSegment / 1000) == 60) {
 			playBeep();

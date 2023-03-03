@@ -4,26 +4,36 @@
 	import Fa from 'svelte-fa';
 	import { faClose, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 	import LoginForm from './LoginForm.svelte';
+	import { get } from 'svelte/store';
+	import { API_URL } from '../../../stores';
+	import { goto } from '$app/navigation';
 
 	export let data: PageData;
 	const { fetch } = data;
 	let submitResult: Promise<string> | undefined;
 
-	const onSubmit = async (name: string, password: string) => {
-		submitResult = fetch('/api/token', {
+	const onSubmit = async (id: string, password: string) => {
+		submitResult = fetch(`${get(API_URL)}/api/timer/token`, {
 			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
 			body: JSON.stringify({
-				name,
+				id,
 				password
 			})
 		})
-			.then((res) => res.json())
+			.then((res) => {
+				if (!res.ok) {
+					throw new Error(res.statusText);
+				}
+				return res.json();
+			})
 			.then((data) => {
-				console.log(data);
-				return data.id;
+				localStorage.setItem('token', data.token);
+				goto(`/manage/${id}`);
+				return data.token;
 			});
-
-		await submitResult;
 	};
 </script>
 
