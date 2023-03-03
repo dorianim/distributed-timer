@@ -3,7 +3,7 @@ use crate::{Segment, Timer};
 use axum::body::{Body, BoxBody};
 use axum::extract::{Path, State};
 use axum::http::{request, Request, StatusCode};
-use axum::middleware::{Next, self};
+use axum::middleware::{self, Next};
 use axum::response::Response;
 use axum::routing::{get, post, put};
 use axum::Router;
@@ -64,6 +64,11 @@ struct Claims {
     exp: usize,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct TokenResponse {
+    token: String,
+}
+
 async fn auth_middleware<B>(request: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
     let auth = request
         .headers()
@@ -77,8 +82,7 @@ async fn auth_middleware<B>(request: Request<B>, next: Next<B>) -> Result<Respon
         &DecodingKey::from_secret("secret".as_ref()),
         &Validation::default(),
     );
-    if token.is_err() || request.uri().to_string() != format!("/{}", token.unwrap().claims.id)
-    {
+    if token.is_err() || request.uri().to_string() != format!("/{}", token.unwrap().claims.id) {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
@@ -88,7 +92,7 @@ async fn auth_middleware<B>(request: Request<B>, next: Next<B>) -> Result<Respon
 async fn create_token(
     State(state): State<SharedState>,
     Json(request): Json<TokenRequest>,
-) -> Result<String, StatusCode> {
+) -> Result<Json<TokenResponse>, StatusCode> {
     // Check Password from ID
     let mut redis = state.as_ref().redis.clone();
     let pw_hash = hex::encode(sha3_from_string(request.password.clone()));
@@ -114,7 +118,7 @@ async fn create_token(
     )
     .unwrap();
 
-    Ok(token)
+    Ok(Json(TokenResponse { token }))
 }
 
 fn sha3_from_string(string: String) -> Vec<u8> {
@@ -230,8 +234,10 @@ async fn delete_timer(
 }
 
 pub fn routes() -> Router<SharedState> {
-    Router::new().route("/:id", put(update_timer)).layer(middleware::from_fn(auth_middleware)).route("/token", post(create_token)).route("/", post(create_timer)).route(
-        "/:id",
-        get(get_timer).delete(delete_timer),
-    )
+    Router::new()
+        .route("/:id", put(update_timer))
+        .layer(middleware::from_fn(auth_middleware))
+        .route("/token", post(create_token))
+        .route("/", post(create_timer))
+        .route("/:id", get(get_timer).delete(delete_timer))
 }
