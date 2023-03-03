@@ -30,6 +30,7 @@ enum WSMessage {
     GetTime,
     Timer(Timer),
     Timestamp(u128),
+    Error(String),
 }
 
 pub async fn ws_handler(
@@ -85,6 +86,7 @@ impl WsConnection {
                     .redis
                     .get(format!("updated:{}", self.timer_id))
                     .unwrap();
+
                 if update_nr > self.last_update_nr {
                     println!("Timer has been updated");
                     self.last_update_nr = update_nr;
@@ -95,12 +97,8 @@ impl WsConnection {
                             .unwrap(),
                     )
                     .unwrap();
-                    let respone = WSMessage::Timer(timer.into());
-
-                    self.sender
-                        .send(serde_json::to_string(&respone).unwrap().into())
-                        .await
-                        .unwrap();
+                    let response = WSMessage::Timer(timer.into());
+                    self.send_message(&response).await;
                 }
             }
         }
@@ -114,12 +112,8 @@ impl WsConnection {
                     .duration_since(UNIX_EPOCH)
                     .expect("Back to the Past lul");
 
-                let respone = WSMessage::Timestamp(current_time.as_millis());
-
-                self.sender
-                    .send(serde_json::to_string(&respone).unwrap().into())
-                    .await
-                    .unwrap();
+                let response = WSMessage::Timestamp(current_time.as_millis());
+                self.send_message(&response).await;
             }
             WSMessage::Hello(id) => {
                 self.timer_id = id.clone();
@@ -127,20 +121,21 @@ impl WsConnection {
                     serde_json::from_str(&self.redis.get::<String, String>(id.clone()).unwrap())
                         .unwrap();
 
-                let respone = WSMessage::Timer(timer.into());
-
-                self.sender
-                    .send(serde_json::to_string(&respone).unwrap().into())
-                    .await
-                    .unwrap();
+                let response = WSMessage::Timer(timer.into());
+                self.send_message(&response).await;
             }
             _ => {
-                self.sender
-                    .send("Invalid message type".into())
-                    .await
-                    .unwrap();
+                let response = WSMessage::Error("Invalid message type".to_owned());
+                self.send_message(&response).await;
             }
         }
+    }
+
+    async fn send_message(&mut self, message: &WSMessage) {
+        self.sender
+            .send(serde_json::to_string(message).unwrap().into())
+            .await
+            .unwrap();
     }
 }
 
