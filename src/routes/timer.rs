@@ -13,7 +13,7 @@ use axum::{
     Json, TypedHeader,
 };
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use redis::Commands;
+use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sha3::Digest;
 use sha3::Sha3_256;
@@ -91,10 +91,15 @@ async fn create_token(
     Json(request): Json<TokenRequest>,
 ) -> Result<String, StatusCode> {
     // Check Password from ID
-    let mut redis = state.as_ref().redis.write().await;
+    let mut redis = state.as_ref().redis.clone();
     let pw_hash = generate_id(request.password.clone());
-    let timer: Timer =
-        serde_json::from_str(&redis.get::<String, String>(request.id.clone()).unwrap()).unwrap();
+    let timer: Timer = serde_json::from_str(
+        &redis
+            .get::<String, String>(request.id.clone())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
     if pw_hash != timer.password {
         return Err(StatusCode::UNAUTHORIZED);
     }
@@ -133,9 +138,9 @@ async fn create_timer(
     Json(request): Json<TimerRequest>,
 ) -> Result<Json<TimerResponse>, StatusCode> {
     // Timer already exists
-    let mut redis = state.as_ref().redis.write().await;
+    let mut redis = state.as_ref().redis.clone();
     let id_hash = generate_id(request.name.clone());
-    if redis.exists::<String, bool>(id_hash.clone()).unwrap() {
+    if redis.exists::<String, bool>(id_hash.clone()).await.unwrap() {
         return Err(StatusCode::CONFLICT);
     }
 
@@ -152,11 +157,13 @@ async fn create_timer(
 
     redis
         .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
+        .await
         .unwrap();
 
     // Set update id
     redis
         .set::<String, u32, ()>(String::from("updated:") + &timer.id, 0)
+        .await
         .unwrap();
 
     let timer_response = TimerResponse {
@@ -174,9 +181,9 @@ async fn get_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Json<TimerResponse> {
-    let mut redis = state.as_ref().redis.write().await;
+    let mut redis = state.as_ref().redis.clone();
     let timer: TimerResponse =
-        serde_json::from_str(&redis.get::<String, String>(id).unwrap()).unwrap();
+        serde_json::from_str(&redis.get::<String, String>(id).await.unwrap()).unwrap();
     Json(timer)
 }
 
@@ -185,11 +192,11 @@ async fn update_timer(
     Path(id): Path<String>,
     Json(request): Json<TimerRequest>,
 ) -> impl IntoResponse {
-    let mut redis = state.as_ref().redis.write().await;
+    let mut redis = state.as_ref().redis.clone();
     let password_hash_u8 = sha3_from_string(request.password);
 
     let old_timer: Timer =
-        serde_json::from_str(&redis.get::<String, String>(id.clone()).unwrap()).unwrap();
+        serde_json::from_str(&redis.get::<String, String>(id.clone()).await.unwrap()).unwrap();
     if old_timer.password != hex::encode(password_hash_u8.clone()) {
         return StatusCode::UNAUTHORIZED;
     }
@@ -203,10 +210,12 @@ async fn update_timer(
     };
     redis
         .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
+        .await
         .unwrap();
 
     redis
         .incr::<String, u32, ()>(String::from("updated:") + &timer.id, 1)
+        .await
         .unwrap();
     StatusCode::OK
 }
@@ -215,8 +224,8 @@ async fn delete_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let mut redis = state.as_ref().redis.write().await;
-    redis.del::<String, ()>(id).unwrap();
+    let mut redis = state.as_ref().redis.clone();
+    redis.del::<String, ()>(id).await.unwrap();
     StatusCode::OK
 }
 

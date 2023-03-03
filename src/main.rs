@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use std::sync::Arc;
 use std::{env, time::Duration};
-use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::Span;
@@ -29,7 +28,7 @@ pub struct Timer {
 
 type SharedState = Arc<AppState>;
 pub struct AppState {
-    redis: RwLock<redis::Connection>,
+    redis: redis::aio::ConnectionManager,
     jwt_key: String,
     redis_string: String,
 }
@@ -43,10 +42,11 @@ async fn main() {
 
     let redis_string = env::var("REDIS_STRING").expect("REDIS_STRING is not set");
     let jwt_key = env::var("JWT_KEY").expect("JWT_KEY is not set");
-    let client = redis::Client::open(redis_string.to_owned());
+    let client = redis::Client::open(redis_string.to_owned()).unwrap();
+    let manager = redis::aio::ConnectionManager::new(client).await.unwrap();
 
     let state = Arc::new(AppState {
-        redis: RwLock::new(client.unwrap().get_connection().unwrap()),
+        redis: manager,
         jwt_key,
         redis_string,
     });

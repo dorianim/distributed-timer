@@ -16,7 +16,7 @@ use futures::{
 use serde::{Deserialize, Serialize};
 use serde_json;
 
-use redis::Commands;
+use redis::AsyncCommands;
 
 use crate::SharedState;
 use crate::Timer;
@@ -38,25 +38,28 @@ enum WSMessage {
 struct WsConnection {
     sender: SplitSink<WebSocket, Message>,
     receiver: SplitStream<WebSocket>,
-    redis: redis::Connection,
+    redis: redis::aio::ConnectionManager,
+    pubsub: redis::aio::PubSub,
     timer_id: String,
-    last_update_nr: i32,
 }
 
 impl WsConnection {
-    fn new(state: SharedState, socket: WebSocket) -> Self {
+    async fn new(state: SharedState, socket: WebSocket) -> Self {
         let (sender, receiver) = socket.split();
-        let redis = redis::Client::open(state.redis_string.to_owned())
+        let redis = state.redis.clone();
+        let pubsub = redis::Client::open(state.redis_string.to_owned())
             .unwrap()
-            .get_connection()
-            .unwrap();
+            .get_async_connection()
+            .await
+            .unwrap()
+            .into_pubsub();
 
         WsConnection {
             sender,
             receiver,
             redis,
+            pubsub,
             timer_id: String::new(),
-            last_update_nr: -1,
         }
     }
 
@@ -74,25 +77,13 @@ impl WsConnection {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
             // Check if timer has been updated
-            if !self.timer_id.is_empty() {
-                let update_nr: i32 = self
-                    .redis
-                    .get(format!("updated:{}", self.timer_id))
-                    .unwrap();
-
-                if update_nr > self.last_update_nr {
-                    println!("Timer has been updated");
-                    self.last_update_nr = update_nr;
-                    let timer: Timer = serde_json::from_str(
-                        &self
-                            .redis
-                            .get::<String, String>(self.timer_id.clone())
-                            .unwrap(),
-                    )
-                    .unwrap();
-                    let response = WSMessage::Timer(timer.into());
-                    self.send_message(&response).await;
-                }
+            let msg = self.pubsub.on_message().next().await;
+            if let Some(msg) = msg {
+                println!("Updated! {:?}", msg);
+                let timer: Timer =
+                    serde_json::from_str(&msg.get_payload::<String>().unwrap()).unwrap();
+                let response = WSMessage::Timer(timer.into());
+                self.send_message(&response).await;
             }
         }
     }
@@ -110,9 +101,11 @@ impl WsConnection {
             }
             WSMessage::Hello(id) => {
                 self.timer_id = id.clone();
-                let timer: Timer =
-                    serde_json::from_str(&self.redis.get::<String, String>(id.clone()).unwrap())
-                        .unwrap();
+                self.pubsub.subscribe(self.timer_id.clone()).await.unwrap();
+                let timer: Timer = serde_json::from_str(
+                    &self.redis.get::<String, String>(id.clone()).await.unwrap(),
+                )
+                .unwrap();
 
                 let response = WSMessage::Timer(timer.into());
                 self.send_message(&response).await;
@@ -133,7 +126,7 @@ impl WsConnection {
 }
 
 async fn handle_socket(State(state): State<SharedState>, socket: WebSocket) {
-    let mut connection = WsConnection::new(state, socket);
+    let mut connection = WsConnection::new(state, socket).await;
 
     connection.listen().await;
 }
