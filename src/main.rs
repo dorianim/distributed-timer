@@ -48,7 +48,7 @@ async fn main() {
         .await
         .unwrap();
 
-    let state = Arc::new(AppState {
+    let state: SharedState = Arc::new(AppState {
         redis: manager,
         redis_client: client,
         jwt_key,
@@ -56,7 +56,7 @@ async fn main() {
 
     let app = Router::new()
         .nest("/api/ws", routes::ws::routes())
-        .nest("/api/timer", routes::timer::routes())
+        .nest("/api/timer", routes::timer::routes(state.clone()))
         .fallback(routes::client::client_assets)
         .layer(cors)
         .layer(
@@ -73,7 +73,7 @@ async fn main() {
                 }),
         )
         .layer(CatchPanicLayer::new())
-        .with_state(Arc::clone(&state));
+        .with_state(state);
 
     // run it with hyper on localhost:3000
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())

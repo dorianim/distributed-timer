@@ -1,8 +1,7 @@
 use crate::SharedState;
 use crate::{Segment, Timer};
-use axum::body::{Body, BoxBody};
 use axum::extract::{Path, State};
-use axum::http::{request, Request, StatusCode};
+use axum::http::{Request, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::Response;
 use axum::routing::{get, post, put};
@@ -12,7 +11,7 @@ use axum::{
     response::IntoResponse,
     Json, TypedHeader,
 };
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sha3::Digest;
@@ -69,17 +68,16 @@ struct TokenResponse {
     token: String,
 }
 
-async fn auth_middleware<B>(request: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
-    let auth = request
-        .headers()
-        .get("Authorization")
-        .unwrap()
-        .to_str()
-        .unwrap();
-    let auth = auth.split(" ").collect::<Vec<&str>>()[1];
+async fn auth_middleware<B>(
+    State(state): State<SharedState>,
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+    request: Request<B>,
+    next: Next<B>,
+) -> Result<Response, StatusCode> {
+    let auth = auth.token();
     let token = decode::<Claims>(
         auth,
-        &DecodingKey::from_secret("secret".as_ref()),
+        &DecodingKey::from_secret(state.jwt_key.as_ref()),
         &Validation::default(),
     );
     if token.is_err() || request.uri().to_string() != format!("/{}", token.unwrap().claims.id) {
@@ -103,9 +101,11 @@ async fn create_token(
             .unwrap(),
     )
     .unwrap();
+
     if pw_hash != timer.password {
         return Err(StatusCode::UNAUTHORIZED);
     }
+
     let my_claims = Claims {
         id: request.id.clone(),
         exp: 13847470436348788,
@@ -114,7 +114,7 @@ async fn create_token(
     let token = encode(
         &Header::default(),
         &my_claims,
-        &EncodingKey::from_secret("secret".as_ref()),
+        &EncodingKey::from_secret(state.jwt_key.as_ref()),
     )
     .unwrap();
 
@@ -233,10 +233,10 @@ async fn delete_timer(
     StatusCode::OK
 }
 
-pub fn routes() -> Router<SharedState> {
+pub fn routes(state: SharedState) -> Router<SharedState> {
     Router::new()
         .route("/:id", put(update_timer))
-        .layer(middleware::from_fn(auth_middleware))
+        .layer(middleware::from_fn_with_state(state, auth_middleware))
         .route("/token", post(create_token))
         .route("/", post(create_timer))
         .route("/:id", get(get_timer).delete(delete_timer))
