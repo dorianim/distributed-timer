@@ -1,5 +1,6 @@
 use axum::{http::Request, response::Response, Router};
 use serde::{Deserialize, Serialize};
+use tower_http::catch_panic::CatchPanicLayer;
 
 use std::sync::Arc;
 use std::{env, time::Duration};
@@ -71,6 +72,7 @@ async fn main() {
                     );
                 }),
         )
+        .layer(CatchPanicLayer::new())
         .with_state(Arc::clone(&state));
 
     // run it with hyper on localhost:3000
