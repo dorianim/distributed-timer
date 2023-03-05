@@ -11,7 +11,7 @@ use axum::{
     response::IntoResponse,
     Json, TypedHeader,
 };
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sha3::Digest;
@@ -74,12 +74,16 @@ async fn auth_middleware<B>(
     request: Request<B>,
     next: Next<B>,
 ) -> Result<Response, StatusCode> {
-    let auth = auth.token();
+    let mut validation = Validation::new(Algorithm::default());
+    validation.set_issuer(&["de:itsblue:money-balancer"]);
+    validation.validate_exp = false;
+
     let token = decode::<Claims>(
-        auth,
+        auth.token(),
         &DecodingKey::from_secret(state.jwt_key.as_ref()),
-        &Validation::default(),
+        &validation,
     );
+
     if token.is_err() || request.uri().to_string() != format!("/{}", token.unwrap().claims.id) {
         return Err(StatusCode::UNAUTHORIZED);
     }
@@ -108,7 +112,7 @@ async fn create_token(
 
     let my_claims = Claims {
         id: request.id.clone(),
-        exp: 13847470436348788,
+        exp: 0,
     };
 
     let token = encode(
