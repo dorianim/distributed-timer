@@ -18,6 +18,11 @@ use sha3::Digest;
 use sha3::Sha3_256;
 use std::str;
 
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
+
 const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -91,40 +96,6 @@ async fn auth_middleware<B>(
     Ok(next.run(request).await)
 }
 
-async fn create_token(
-    State(state): State<SharedState>,
-    Json(request): Json<TokenRequest>,
-) -> Result<Json<TokenResponse>, StatusCode> {
-    // Check Password from ID
-    let mut redis = state.as_ref().redis.clone();
-    let pw_hash = hex::encode(sha3_from_string(request.password.clone()));
-    let timer: Timer = serde_json::from_str(
-        &redis
-            .get::<String, String>(request.id.clone())
-            .await
-            .unwrap(),
-    )
-    .unwrap();
-
-    if pw_hash != timer.password {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-
-    let my_claims = Claims {
-        id: request.id.clone(),
-        exp: 0,
-    };
-
-    let token = encode(
-        &Header::default(),
-        &my_claims,
-        &EncodingKey::from_secret(state.jwt_key.as_ref()),
-    )
-    .unwrap();
-
-    Ok(Json(TokenResponse { token }))
-}
-
 fn sha3_from_string(string: String) -> Vec<u8> {
     let mut hasher = Sha3_256::new();
     hasher.update(string);
@@ -141,26 +112,76 @@ fn generate_id(name: String) -> String {
     id_hash
 }
 
+fn hash_password(password: &str) -> String {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    argon2
+        .hash_password(password.as_ref(), &salt)
+        .unwrap()
+        .to_string()
+}
+
+fn check_password_hash(password: &str, password_hash: &str) -> bool {
+    let parsed_hash = PasswordHash::new(password_hash).unwrap();
+    Argon2::default()
+        .verify_password(password.as_ref(), &parsed_hash)
+        .is_ok()
+}
+
+async fn create_token(
+    State(state): State<SharedState>,
+    Json(request): Json<TokenRequest>,
+) -> Result<Json<TokenResponse>, StatusCode> {
+    // Check Password from ID
+    let mut redis = state.as_ref().redis.clone();
+
+    let timer: Timer = serde_json::from_str(
+        &redis
+            .get::<String, String>(request.id.clone())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    if !check_password_hash(&request.password, &timer.password) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let claims = Claims {
+        id: request.id.clone(),
+        exp: 0,
+    };
+
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(state.jwt_key.as_ref()),
+    )
+    .unwrap();
+
+    Ok(Json(TokenResponse { token }))
+}
+
 async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerRequest>,
 ) -> Result<Json<TimerResponse>, StatusCode> {
     // Timer already exists
     let mut redis = state.as_ref().redis.clone();
-    let id_hash = generate_id(request.name.clone());
-    if redis.exists::<String, bool>(id_hash.clone()).await.unwrap() {
+    let id = generate_id(request.name.clone());
+    if redis.exists::<String, bool>(id.clone()).await.unwrap() {
         return Err(StatusCode::CONFLICT);
     }
 
-    let password_hash_u8 = sha3_from_string(request.password);
-    let id_hash = generate_id(request.name.clone());
+    let password = hash_password(&request.password);
+
     let timer = Timer {
         segments: request.segments,
         name: request.name,
         repeat: request.repeat,
         start_at: request.start_at,
-        password: hex::encode(password_hash_u8),
-        id: id_hash,
+        password,
+        id,
     };
 
     redis
@@ -168,21 +189,7 @@ async fn create_timer(
         .await
         .unwrap();
 
-    // Set update id
-    redis
-        .set::<String, u32, ()>(String::from("updated:") + &timer.id, 0)
-        .await
-        .unwrap();
-
-    let timer_response = TimerResponse {
-        segments: timer.segments,
-        name: timer.name,
-        repeat: timer.repeat,
-        start_at: timer.start_at,
-        id: timer.id,
-    };
-
-    Ok(Json(timer_response))
+    Ok(Json(timer.into()))
 }
 
 async fn get_timer(
