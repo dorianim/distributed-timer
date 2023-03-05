@@ -132,16 +132,15 @@ async fn create_token(
     State(state): State<SharedState>,
     Json(request): Json<TokenRequest>,
 ) -> Result<Json<TokenResponse>, StatusCode> {
-    // Check Password from ID
     let mut redis = state.as_ref().redis.clone();
 
-    let timer: Timer = serde_json::from_str(
-        &redis
-            .get::<String, String>(request.id.clone())
-            .await
-            .unwrap(),
-    )
-    .unwrap();
+    let timer = &redis.get::<String, String>(request.id.clone()).await;
+
+    if timer.is_err() {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    let timer: Timer = serde_json::from_str(timer.as_ref().unwrap()).unwrap();
 
     if !check_password_hash(&request.password, &timer.password) {
         return Err(StatusCode::UNAUTHORIZED);
