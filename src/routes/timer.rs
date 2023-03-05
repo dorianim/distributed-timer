@@ -47,6 +47,12 @@ impl Into<TimerResponse> for Timer {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct TimerCreationResponse {
+    timer: TimerResponse,
+    token: String,
+}
+
 #[derive(Serialize, Deserialize)]
 struct TimerRequest {
     // Get from User
@@ -67,6 +73,7 @@ struct TokenRequest {
 struct Claims {
     id: String,
     exp: usize,
+    iss: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -81,7 +88,7 @@ async fn auth_middleware<B>(
     next: Next<B>,
 ) -> Result<Response, StatusCode> {
     let mut validation = Validation::new(Algorithm::default());
-    validation.set_issuer(&["de:itsblue:money-balancer"]);
+    validation.set_issuer(&["de:itsblue:synced-timer"]);
     validation.validate_exp = false;
 
     let token = decode::<Claims>(
@@ -143,6 +150,21 @@ async fn get_timer_from_redis(
     Ok(timer)
 }
 
+fn create_jwt(id: String, key: &str) -> String {
+    let claims = Claims {
+        id: id,
+        exp: 0,
+        iss: "de:itsblue:synced-timer".to_string(),
+    };
+
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(key.as_ref()),
+    )
+    .unwrap()
+}
+
 async fn create_token(
     State(state): State<SharedState>,
     Json(request): Json<TokenRequest>,
@@ -155,17 +177,7 @@ async fn create_token(
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    let claims = Claims {
-        id: request.id.clone(),
-        exp: 0,
-    };
-
-    let token = encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(state.jwt_key.as_ref()),
-    )
-    .unwrap();
+    let token = create_jwt(request.id, &state.jwt_key);
 
     Ok(Json(TokenResponse { token }))
 }
@@ -173,7 +185,7 @@ async fn create_token(
 async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerRequest>,
-) -> Result<Json<TimerResponse>, StatusCode> {
+) -> Result<Json<TimerCreationResponse>, StatusCode> {
     // Timer already exists
     let mut redis = state.as_ref().redis.clone();
     let id = generate_id(request.name.clone());
@@ -197,7 +209,12 @@ async fn create_timer(
         .await
         .unwrap();
 
-    Ok(Json(timer.into()))
+    let token = create_jwt(timer.id.clone(), &state.jwt_key);
+
+    Ok(Json(TimerCreationResponse {
+        timer: timer.into(),
+        token: token,
+    }))
 }
 
 async fn get_timer(

@@ -21,10 +21,17 @@
 				'Content-Type': 'application/json'
 			}
 		})
-			.then((res) => res.json())
+			.then((res) => {
+				if (!res.ok) {
+					throw new Error(res.statusText);
+				}
+				return res.json();
+			})
 			.then((data) => {
 				console.log(data);
-				return data.id;
+				localStorage.setItem('token', data.token);
+				goto(`/manage/${data.timer.id}`);
+				return data;
 			});
 	};
 </script>
