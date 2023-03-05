@@ -10,7 +10,7 @@
 				{
 					label: 'Switch',
 					time: 10 * 1000,
-					sound: false
+					sound: true
 				},
 				{
 					label: 'Boulder',

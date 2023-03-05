@@ -84,13 +84,6 @@
 
 		const currentSegment = segments[currentSegmentIndex - 1];
 
-		if (
-			currentSegment.sound &&
-			Math.floor(timeInCurrentSegment / 1000) == Math.floor((currentSegment.time - 1) / 1000)
-		) {
-			playBeep();
-		}
-
 		if (currentSegment.sound && Math.floor(timeInCurrentSegment / 1000) == 60) {
 			playBeep();
 		}
