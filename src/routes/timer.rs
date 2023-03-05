@@ -72,7 +72,7 @@ struct TokenResponse {
 async fn auth_middleware<B>(request: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
     let auth = request
         .headers()
-        .get("authorization")
+        .get("Authorization")
         .unwrap()
         .to_str()
         .unwrap();

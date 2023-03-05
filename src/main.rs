@@ -56,6 +56,7 @@ async fn main() {
     let app = Router::new()
         .nest("/api/ws", routes::ws::routes())
         .nest("/api/timer", routes::timer::routes())
+        .fallback(routes::client::client_assets)
         .layer(cors)
         .layer(
             TraceLayer::new_for_http()
