@@ -4,7 +4,7 @@ import { API_URL } from '../../../stores';
 import type { Timer } from '../../../types/timer';
 
 export const load: Load = async ({ fetch, url, params }) => {
-	const resp = await fetch(`${get(API_URL)}/api/timer/${params.id}`);
+	const resp = await fetch(`${get(API_URL)}/timer/${params.id}`);
 	if (!resp.ok) {
 		throw error(resp.status, resp.statusText);
 	}

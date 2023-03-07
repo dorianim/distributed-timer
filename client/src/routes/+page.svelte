@@ -1,7 +1,4 @@
 <script lang="ts">
-	import type { PageData } from './$types';
-	export let data: PageData;
-	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
 
 	let visible: boolean = true;

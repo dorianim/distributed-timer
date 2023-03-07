@@ -9,9 +9,6 @@
 
 	// Finally, your application's global stylesheet (sometimes labeled 'app.css')
 	import '../app.postcss';
-
-	export const prerender = false;
-	export const ssr = false;
 </script>
 
 <svelte:head

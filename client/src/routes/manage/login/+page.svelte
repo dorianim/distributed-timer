@@ -13,7 +13,7 @@
 	let submitResult: Promise<string> | undefined;
 
 	const onSubmit = async (id: string, password: string) => {
-		submitResult = fetch(`${get(API_URL)}/api/timer/token`, {
+		submitResult = fetch(`${get(API_URL)}/timer/token`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
