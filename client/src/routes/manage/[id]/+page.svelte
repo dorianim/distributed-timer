@@ -22,7 +22,7 @@
 	const onSubmit = async (newTimerData: Timer) => {
 		timerData = newTimerData;
 
-		submitResult = fetch(`${get(API_URL)}/api/timer/${data.params.id}`, {
+		submitResult = fetch(`${get(API_URL)}/timer/${data.params.id}`, {
 			method: 'PUT',
 			body: JSON.stringify({ password: 'test', ...newTimerData }),
 			headers: {

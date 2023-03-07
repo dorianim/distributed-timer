@@ -15,7 +15,7 @@
 	let lastGetTimeSent = 0;
 	let latestOffsets: number[] = [];
 
-	const socket = new WebSocket('ws://localhost:3000/api/ws');
+	const socket = new WebSocket('wss://timer.itsblue.de/api/ws');
 	// Connection opened
 	socket.addEventListener('open', (event) => {
 		socket.send(JSON.stringify({ data: data.params.timerId, type: 'Hello' }));

@@ -14,7 +14,7 @@
 	let submitResult: Promise<string> | undefined;
 
 	const onSubmit = (timerData: TimerCreationRequest) => {
-		submitResult = fetch(`${get(API_URL)}/api/timer`, {
+		submitResult = fetch(`${get(API_URL)}/timer`, {
 			method: 'POST',
 			body: JSON.stringify(timerData),
 			headers: {
