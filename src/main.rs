@@ -20,7 +20,6 @@ pub struct Segment {
 pub struct Timer {
     // Return after TimerRequest
     pub segments: Vec<Segment>,
-    pub name: String,
     pub repeat: bool,
     pub start_at: u64,
     pub password: String,

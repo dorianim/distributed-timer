@@ -2,26 +2,23 @@
 	import { ProgressRadial, SlideToggle } from '@skeletonlabs/skeleton';
 	import { get } from 'svelte/store';
 	import { API_URL } from '../../../stores';
-	import type { Segment } from '../../../types/segment';
-	import type { Timer, TimerCreationRequest } from '../../../types/timer';
+	import type { Timer, TimerUpdateRequest } from '../../../types/timer';
 	import type { PageData } from './$types';
 	import TimerForm from './TimerForm.svelte';
 	import Fa from 'svelte-fa';
 	import { faClose, faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
-	import type TimerFormData from './TimerForm.svelte';
 	import { goto } from '$app/navigation';
+	import { browser } from '$app/environment';
 
 	export let data: PageData;
 	let { timerData } = data;
-	let submitResult: Promise<Response> | undefined;
+	let submitResult: Promise<Timer> | undefined;
 
 	$: {
-		if (!localStorage.getItem('token')) goto('/manage/login');
+		if (browser && !localStorage.getItem('token')) goto('/manage/login');
 	}
 
-	const onSubmit = async (newTimerData: Timer) => {
-		timerData = newTimerData;
-
+	const onSubmit = async (newTimerData: TimerUpdateRequest) => {
 		submitResult = fetch(`${get(API_URL)}/timer/${data.params.id}`, {
 			method: 'PUT',
 			body: JSON.stringify({ password: 'test', ...newTimerData }),
@@ -29,16 +26,21 @@
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${localStorage.getItem('token')}`
 			}
-		}).then((res) => {
-			if (res.status !== 200) {
-				throw new Error('Something went wrong');
-			}
-			return res;
-		});
+		})
+			.then((res) => {
+				if (!res.ok) {
+					throw new Error(res.statusText);
+				}
+				return res.json();
+			})
+			.then((timer: Timer) => {
+				timerData = timer;
+				return timer;
+			});
 	};
 </script>
 
-<h2 class="text-center">Manage timer <strong>{timerData.id}</strong> ({timerData.name})</h2>
+<h2 class="text-center">Manage timer <strong>{timerData.id}</strong></h2>
 
 <div class="p-4 md:w-[80%] m-auto items-center">
 	{#await submitResult}

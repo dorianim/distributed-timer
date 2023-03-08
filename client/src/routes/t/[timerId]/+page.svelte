@@ -6,6 +6,8 @@
 	import screenfull from 'screenfull';
 	import Timer from './Timer.svelte';
 	import type { Timer as TimerType } from '../../../types/timer';
+	import { API_WS_URL } from '../../../stores';
+	import { onMount } from 'svelte';
 
 	export let data: PageData;
 
@@ -14,17 +16,7 @@
 	let timerData: TimerType | undefined;
 	let lastGetTimeSent = 0;
 	let latestOffsets: number[] = [];
-
-	const socket = new WebSocket('wss://timer.itsblue.de/api/ws');
-	// Connection opened
-	socket.addEventListener('open', (event) => {
-		socket.send(JSON.stringify({ data: data.params.timerId, type: 'Hello' }));
-
-		setInterval(() => {
-			lastGetTimeSent = performance.now();
-			socket.send(JSON.stringify({ type: 'GetTime' }));
-		}, 1000);
-	});
+	let socket: WebSocket | undefined;
 
 	const isOffsetInMargin = (offset: number) => {
 		if (!timeOffset) {
@@ -56,27 +48,65 @@
 		console.log(latestOffsets);
 	};
 
-	// Listen for messages
-	socket.addEventListener('message', (event) => {
-		const data = JSON.parse(event.data);
-		console.log(data);
-		switch (data.type) {
-			case 'Timer':
-				timerData = data.data;
-				break;
-			case 'Timestamp':
-				const now = performance.now();
-				const getTimeRoundTrip = now - lastGetTimeSent;
-				timeOffset = data.data + getTimeRoundTrip / 2 - now;
-				handleNewOffset(timeOffset);
-		}
-	});
-
 	const enableSound = () => {
 		Tone.start().then(() => (soundEnabled = true));
 	};
 
+	const initSocket = () => {
+		socket = new WebSocket(get(API_WS_URL));
+
+		// Listen for messages
+		socket.addEventListener('message', (event) => {
+			const data = JSON.parse(event.data);
+			console.log(data);
+			switch (data.type) {
+				case 'Timer':
+					timerData = data.data;
+					break;
+				case 'Timestamp':
+					const now = performance.now();
+					const getTimeRoundTrip = now - lastGetTimeSent;
+					timeOffset = data.data + getTimeRoundTrip / 2 - now;
+					handleNewOffset(timeOffset);
+			}
+		});
+
+		// Connection opened
+		socket.addEventListener('open', (event) => {
+			socket?.send(JSON.stringify({ data: data.params.timerId, type: 'Hello' }));
+
+			setInterval(() => {
+				lastGetTimeSent = performance.now();
+				socket?.send(JSON.stringify({ type: 'GetTime' }));
+			}, 1000);
+		});
+
+		// Listen for errors
+		socket.addEventListener('error', restartSocket);
+
+		// Listen for close
+		socket.addEventListener('close', restartSocket);
+	};
+
+	const restartSocket = (e: Event) => {
+		socket?.removeEventListener('error', restartSocket);
+		socket?.removeEventListener('close', restartSocket);
+		socket?.close();
+
+		console.log('restarting socket', e);
+
+		setTimeout(() => {
+			socket = undefined;
+		}, 1000);
+	};
+
 	Tone.start().then(() => (soundEnabled = true));
+
+	$: {
+		if (!socket) {
+			initSocket();
+		}
+	}
 
 	$: {
 		if (timerData && !soundEnabled && get(modalStore).length == 0) {
@@ -101,7 +131,7 @@
 	}
 </script>
 
-{#if timerData && timeOffset}
+{#if socket?.readyState === 1 && timerData && timeOffset}
 	<Timer {timerData} {soundEnabled} {timeOffset} />
 {:else}
 	<div

@@ -2,7 +2,6 @@
 	export let onSubmit: (name: string, password: string) => void;
 
 	const handleSubmit = async (e: Event) => {
-		e.preventDefault();
 		const form = e.target as HTMLFormElement;
 		const formData = new FormData(form);
 		const name = formData.get('name') as string;
@@ -11,13 +10,13 @@
 	};
 </script>
 
-<form class="grid gap-3" on:submit={handleSubmit}>
+<form class="grid gap-3" on:submit|preventDefault={handleSubmit}>
 	<label class="label">
-		<span>Enter the id of your timer:</span>
+		<span>Enter the name of your timer:</span>
 		<input
 			class="input variant-form-material"
 			type="text"
-			placeholder="timer id"
+			placeholder="timer name"
 			required
 			name="name"
 		/>

@@ -14,9 +14,8 @@ use axum::{
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
-use sha3::Digest;
-use sha3::Sha3_256;
 use std::str;
 
 use argon2::{
@@ -24,25 +23,21 @@ use argon2::{
     Argon2,
 };
 
-const ALPHANUMERIC: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TimerResponse {
     pub segments: Vec<Segment>,
-    pub name: String,
+    pub id: String,
     pub repeat: bool,
     pub start_at: u64,
-    pub id: String,
 }
 
 impl Into<TimerResponse> for Timer {
     fn into(self) -> TimerResponse {
         TimerResponse {
             segments: self.segments,
-            name: self.name,
+            id: self.id,
             repeat: self.repeat,
             start_at: self.start_at,
-            id: self.id,
         }
     }
 }
@@ -54,11 +49,19 @@ struct TimerCreationResponse {
 }
 
 #[derive(Serialize, Deserialize)]
-struct TimerRequest {
+struct TimerCreationRequest {
     // Get from User
     segments: Vec<Segment>,
-    name: String,
+    id: String,
     password: String,
+    repeat: bool,
+    start_at: u64,
+}
+
+#[derive(Serialize, Deserialize)]
+struct TimerUpdateRequest {
+    // Get from User
+    segments: Vec<Segment>,
     repeat: bool,
     start_at: u64,
 }
@@ -102,22 +105,6 @@ async fn auth_middleware<B>(
     }
 
     Ok(next.run(request).await)
-}
-
-fn sha3_from_string(string: String) -> Vec<u8> {
-    let mut hasher = Sha3_256::new();
-    hasher.update(string);
-    hasher.finalize().to_vec()
-}
-
-fn generate_id(name: String) -> String {
-    // Generate id
-    let id_hash_u8: Vec<u8> = sha3_from_string(name);
-    let mut id_hash = String::new();
-    for i in 0..5 {
-        id_hash.push(ALPHANUMERIC[(id_hash_u8[i] as usize) % 26] as char);
-    }
-    id_hash
 }
 
 fn hash_password(password: &str) -> String {
@@ -184,12 +171,19 @@ async fn create_token(
 
 async fn create_timer(
     State(state): State<SharedState>,
-    Json(request): Json<TimerRequest>,
+    Json(request): Json<TimerCreationRequest>,
 ) -> Result<Json<TimerCreationResponse>, StatusCode> {
+    let id_regex = Regex::new(r"^[a-zA-Z0-9-_]+$").unwrap();
+    if !id_regex.is_match(&request.id) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     // Timer already exists
     let mut redis = state.as_ref().redis.clone();
-    let id = generate_id(request.name.clone());
-    if redis.exists::<String, bool>(id.clone()).await.unwrap() {
+    if redis
+        .exists::<String, bool>(request.id.clone())
+        .await
+        .unwrap()
+    {
         return Err(StatusCode::CONFLICT);
     }
 
@@ -197,11 +191,10 @@ async fn create_timer(
 
     let timer = Timer {
         segments: request.segments,
-        name: request.name,
         repeat: request.repeat,
         start_at: request.start_at,
         password,
-        id,
+        id: request.id,
     };
 
     redis
@@ -229,7 +222,7 @@ async fn get_timer(
 async fn update_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-    Json(request): Json<TimerRequest>,
+    Json(request): Json<TimerUpdateRequest>,
 ) -> Result<Json<TimerResponse>, StatusCode> {
     let mut redis = state.as_ref().redis.clone();
 
@@ -237,7 +230,6 @@ async fn update_timer(
 
     let timer = Timer {
         segments: request.segments,
-        name: request.name,
         repeat: request.repeat,
         start_at: request.start_at,
         ..old_timer

@@ -60,7 +60,6 @@
 
 		return {
 			id: timerData.id,
-			name: timerData.name,
 			start_at: start_at,
 			repeat: formData.repeat,
 			segments: formData.segments.map((segment) => {

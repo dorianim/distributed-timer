@@ -18,13 +18,13 @@
 	<div class="card p-4 md:w-[50%] m-auto">
 		<form on:submit={handleSubmit}>
 			<label class="label">
-				<span>To view a timer, enter its ID:</span>
+				<span>To view a timer, enter its name:</span>
 				<div class="input-group  grid-cols-2">
 					<input
 						class="input  variant-form-material"
 						type="text"
 						name="timerId"
-						placeholder="timer id"
+						placeholder="timer name"
 					/>
 
 					<button class="variant-filled-primary">Submit</button>
