@@ -2,6 +2,7 @@
 	import type { Timer } from '../../../types/timer';
 	import type { AudioContext, GainNode, OscillatorNode } from 'standardized-audio-context';
 	import type { Action } from 'svelte/types/runtime/action';
+	import { onMount } from 'svelte';
 
 	export let timerData: Timer;
 	export let audioContext: AudioContext;
@@ -59,7 +60,13 @@
 		}
 	};
 
-	const calculateCurrentSegment = () => {
+	const calculateCurrentSegment: () => {
+		timerText: string;
+		label: string;
+		seconds: number;
+		color?: string;
+		sound: boolean;
+	} = () => {
 		const currentTime = performance.now() + timeOffset;
 		const elapsedTime = currentTime - timerData.start_at;
 
@@ -67,7 +74,8 @@
 			return {
 				timerText: getTimerText(0),
 				label: '',
-				seconds: 0
+				seconds: 0,
+				sound: false
 			};
 		}
 
@@ -81,7 +89,8 @@
 			return {
 				timerText: getTimerText(0),
 				label: segments[segments.length - 1].label,
-				seconds: 0
+				seconds: 0,
+				sound: false
 			};
 		}
 
@@ -97,15 +106,12 @@
 
 		const currentSegment = segments[currentSegmentIndex - 1];
 
-		if (currentSegment.sound) {
-			playCurrentSound(Math.floor(timeInCurrentSegment / 1000));
-		}
-
 		return {
 			timerText: getTimerText(timeInCurrentSegment),
 			label: currentSegment.label,
 			seconds: Math.floor(timeInCurrentSegment / 1000),
-			color: currentSegment.color
+			color: currentSegment.color,
+			sound: currentSegment.sound
 		};
 	};
 
@@ -113,11 +119,11 @@
 	let currentSegment = calculateCurrentSegment();
 	let backgroundDiv: HTMLElement;
 
-	$: {
+	onMount(() => {
 		setInterval(() => {
 			currentSegment = calculateCurrentSegment();
 		}, 100);
-	}
+	});
 
 	$: {
 		if (backgroundDiv && currentSegment) {
@@ -125,6 +131,12 @@
 				`--backgroundColor`,
 				currentSegment.color ?? 'rgb(var(--color-surface-900))'
 			);
+		}
+	}
+
+	$: {
+		if (currentSegment.sound) {
+			playCurrentSound(currentSegment.seconds);
 		}
 	}
 </script>
