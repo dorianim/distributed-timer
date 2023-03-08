@@ -12,6 +12,7 @@
 	}
 
 	interface TimerFormData {
+		when_to_start: 'now' | 'unchanged' | 'custom';
 		start_at_date: string;
 		start_at_time: string;
 		repeat: boolean;
@@ -22,7 +23,6 @@
 	export let onSubmit: (timerData: Timer) => void;
 
 	let formData: TimerFormData;
-	let useCurrentTime: boolean = true;
 
 	const handleSubmit = (e: Event) => {
 		e.preventDefault();
@@ -40,6 +40,7 @@
 				second: '2-digit'
 			}),
 			repeat: timerData.repeat,
+			when_to_start: 'unchanged',
 			segments: timerData.segments.map((segment) => {
 				return {
 					label: segment.label,
@@ -56,9 +57,10 @@
 	};
 
 	const formDataToTimerData = (formData: TimerFormData): Timer => {
-		const start_at = useCurrentTime
-			? new Date().getTime()
-			: new Date(`${formData.start_at_date} ${formData.start_at_time}`).getTime();
+		const start_at =
+			formData.when_to_start === 'now'
+				? new Date().getTime()
+				: new Date(`${formData.start_at_date} ${formData.start_at_time}`).getTime();
 
 		return {
 			id: timerData.id,
@@ -170,18 +172,31 @@
 		>repeat</SlideToggle
 	>
 	<strong>When to start the timer:</strong>
-	<label class="flex items-center space-x-2"
-		><input class="checkbox" type="checkbox" bind:checked={useCurrentTime} />
-		<p>Start timer now</p></label
-	>
+	<fieldset>
+		<label class="flex items-center space-x-2">
+			<div class="space-y-2">
+				<label class="flex items-center space-x-2">
+					<input class="radio" type="radio" value="unchanged" bind:group={formData.when_to_start} />
+					<p>Leave it unchanged</p>
+				</label>
+				<label class="flex items-center space-x-2">
+					<input class="radio" type="radio" value="now" bind:group={formData.when_to_start} />
+					<p>When clicking submit</p>
+				</label>
+				<label class="flex items-center space-x-2">
+					<input class="radio" type="radio" value="custom" bind:group={formData.when_to_start} />
+					<p>At a specific time</p>
+				</label>
+			</div>
+		</label>
+	</fieldset>
 
-	{#if !useCurrentTime}
+	{#if formData.when_to_start === 'custom'}
 		<div class="grid grid-cols-2 gap-3">
 			<input
 				class="input variant-form-material"
 				type="date"
 				placeholder="timer starttime"
-				disabled={useCurrentTime}
 				bind:value={formData.start_at_date}
 				required
 			/>
@@ -189,7 +204,6 @@
 				class="input variant-form-material"
 				type="time"
 				placeholder="timer starttime"
-				disabled={useCurrentTime}
 				step="1"
 				bind:value={formData.start_at_time}
 				required
