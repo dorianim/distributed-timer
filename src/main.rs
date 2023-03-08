@@ -1,4 +1,5 @@
 use axum::{http::Request, response::Response, Router};
+use color::Color;
 use serde::{Deserialize, Serialize};
 use tower_http::catch_panic::CatchPanicLayer;
 
@@ -7,6 +8,7 @@ use std::{env, time::Duration};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::Span;
+mod color;
 mod routes;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -14,6 +16,7 @@ pub struct Segment {
     label: String,
     time: u32,
     sound: bool,
+    color: Option<Color>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default)]
