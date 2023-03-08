@@ -35,7 +35,7 @@
 		const oscillatorNode = audioContext.createOscillator();
 		oscillatorNode.connect(gainNode);
 
-		oscillatorNode.type = 'sine';
+		oscillatorNode.type = 'sawtooth';
 
 		oscillatorNode.frequency.setValueAtTime(frequency, audioContext.currentTime);
 		gainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.02);
@@ -62,6 +62,14 @@
 	const calculateCurrentSegment = () => {
 		const currentTime = performance.now() + timeOffset;
 		const elapsedTime = currentTime - timerData.start_at;
+
+		if (elapsedTime < 0) {
+			return {
+				timerText: getTimerText(0),
+				label: '',
+				seconds: 0
+			};
+		}
 
 		const segments = timerData.segments.map((segment) => ({
 			...segment,
@@ -112,7 +120,7 @@
 	}
 
 	$: {
-		if (backgroundDiv) {
+		if (backgroundDiv && currentSegment) {
 			backgroundDiv.style.setProperty(
 				`--backgroundColor`,
 				currentSegment.color ?? 'rgb(var(--color-surface-900))'

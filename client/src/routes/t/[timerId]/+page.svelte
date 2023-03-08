@@ -141,7 +141,7 @@
 	}
 </script>
 
-{#if socket?.readyState === 1 && timerData && timeOffset}
+{#if timerData && timeOffset}
 	<Timer {timerData} {audioContext} {timeOffset} />
 {:else}
 	<div
