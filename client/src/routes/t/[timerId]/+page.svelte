@@ -7,11 +7,12 @@
 	import type { Timer as TimerType } from '../../../types/timer';
 	import { API_WS_URL } from '../../../stores';
 	import { AudioContext } from 'standardized-audio-context';
+	import NoSleep from 'nosleep.js';
 
 	export let data: PageData;
 
 	const audioContext = new AudioContext();
-	console.log(audioContext.state);
+	const noSleep = new NoSleep();
 
 	let soundEnabled: boolean;
 	let timeOffset: number | undefined;
@@ -120,10 +121,11 @@
 		if (timerData && !soundEnabled && get(modalStore).length == 0) {
 			const d: ModalSettings = {
 				type: 'alert',
-				body: 'Tap anywhere to enable sound',
+				body: 'Tap anywhere to enable sound and wakelock.',
 				buttonTextCancel: 'ok',
 				response: () => {
 					enableSound();
+					noSleep.enable();
 				}
 			};
 			modalStore.trigger(d);
@@ -153,6 +155,7 @@
 	class="absolute top-0 left-0 w-[100vw] h-[100vh] z-50"
 	on:click={() => {
 		screenfull.toggle();
+		noSleep.enable();
 		enableSound();
 	}}
 	on:keydown={() => {}}
