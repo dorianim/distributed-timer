@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Timer } from '../../../types/timer';
 	import type { AudioContext, GainNode, OscillatorNode } from 'standardized-audio-context';
+	import type { Action } from 'svelte/types/runtime/action';
 
 	export let timerData: Timer;
 	export let audioContext: AudioContext;
@@ -95,29 +96,53 @@
 		return {
 			timerText: getTimerText(timeInCurrentSegment),
 			label: currentSegment.label,
-			seconds: Math.floor(timeInCurrentSegment / 1000)
+			seconds: Math.floor(timeInCurrentSegment / 1000),
+			color: currentSegment.color
 		};
 	};
 
 	let lastSoundPlayed = -1;
 	let currentSegment = calculateCurrentSegment();
+	let backgroundDiv: HTMLElement;
 
 	$: {
 		setInterval(() => {
 			currentSegment = calculateCurrentSegment();
 		}, 100);
 	}
+
+	$: {
+		if (backgroundDiv) {
+			backgroundDiv.style.setProperty(
+				`--backgroundColor`,
+				currentSegment.color ?? 'rgb(var(--color-surface-900))'
+			);
+		}
+	}
 </script>
 
-<span class="absolute top-[10%] left-[50%] translate-x-[-50%] translate-y-[-50%] text-[5vw]"
-	>{currentSegment.label}</span
+<div
+	bind:this={backgroundDiv}
+	class="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] overflow-hidden h-[100vh] w-[100vw] flex items-center justify-center background-color"
 >
+	<span class="absolute top-[10%] left-[50%] translate-x-[-50%] translate-y-[-50%] text-[5vw]"
+		>{currentSegment.label}</span
+	>
+	<span class={currentSegment.timerText.length > 5 ? 'text-[23.5vw]' : 'text-[35vw]'}>
+		{currentSegment.timerText}
+	</span>
+</div>
 
-<span
-	class="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] {currentSegment
-		.timerText.length > 5
-		? 'text-[23.5vw]'
-		: 'text-[35vw]'}"
->
-	{currentSegment.timerText}
-</span>
+<style>
+	.background-color {
+		background-color: var(--backgroundColor);
+	}
+
+	span {
+		background: inherit;
+		-webkit-background-clip: text;
+		background-clip: text;
+		color: transparent;
+		filter: sepia(5) saturate(100) invert(1) grayscale(1) contrast(9);
+	}
+</style>

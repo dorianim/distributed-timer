@@ -21,7 +21,7 @@
 	const onSubmit = async (newTimerData: TimerUpdateRequest) => {
 		submitResult = fetch(`${get(API_URL)}/timer/${data.params.id}`, {
 			method: 'PUT',
-			body: JSON.stringify({ password: 'test', ...newTimerData }),
+			body: JSON.stringify(newTimerData),
 			headers: {
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${localStorage.getItem('token')}`
@@ -42,7 +42,7 @@
 
 <h2 class="text-center">Manage timer <strong>{timerData.id}</strong></h2>
 
-<div class="p-4 md:w-[80%] m-auto items-center">
+<div class="p-4 m-auto items-center">
 	{#await submitResult}
 		<div class="flex items-center justify-center">
 			<ProgressRadial class="w-10" />
@@ -76,7 +76,7 @@
 	{/await}
 </div>
 
-<div class="md:w-[50%] m-auto text-center">
+<div class="m-auto text-center">
 	Alternatively, you can <a href="/">view an existing timer</a> or
 	<a href="/manage/login">manage an existing timer</a>
 </div>

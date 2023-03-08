@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
-	import { faTrash, faAdd } from '@fortawesome/free-solid-svg-icons';
+	import { faTrash, faAdd, faRemove } from '@fortawesome/free-solid-svg-icons';
 	import type { Timer } from '../../../types/timer';
 
 	interface SegmentFormData {
 		label: string;
 		time: string; // minutes:seconds
 		sound: boolean;
+		color?: string;
 	}
 
 	interface TimerFormData {
@@ -47,7 +48,8 @@
 						.padStart(2, '0')}:${(Math.floor(segment.time / 1000) % 60)
 						.toString()
 						.padStart(2, '0')}`,
-					sound: segment.sound
+					sound: segment.sound,
+					color: segment.color
 				};
 			})
 		};
@@ -68,7 +70,8 @@
 					time:
 						parseInt(segment.time.split(':')[0]) * 60 * 1000 +
 						parseInt(segment.time.split(':')[1]) * 1000,
-					sound: segment.sound
+					sound: segment.sound,
+					color: segment.color
 				};
 			})
 		};
@@ -98,7 +101,7 @@
 	<strong>Timer sequence:</strong>
 
 	{#each formData.segments as segment, i}
-		<div class="card p-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4 items-center">
+		<div class="card p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-center">
 			<input
 				class="input variant-form-material"
 				type="text"
@@ -115,11 +118,28 @@
 				on:input={() => handleTimeFieldChange(i)}
 				required
 			/>
+
 			<SlideToggle active="bg-primary-500" name="sound" size="sm" bind:checked={segment.sound}
 				>enable sound</SlideToggle
 			>
 
-			<div class="flex items-center justify-around">
+			<label class="label">
+				<div class="flex items-center">
+					<input class="input" type="color" bind:value={segment.color} />
+					<span class="pl-3">background-color</span>
+					{#if segment.color}
+						<button
+							type="button"
+							class="btn-icon p-0"
+							on:click={() => {
+								segment.color = undefined;
+							}}><Fa icon={faRemove} /></button
+						>
+					{/if}
+				</div>
+			</label>
+
+			<div class="flex items-center justify-around sm:col-span-2 lg:col-span-1">
 				<button
 					type="button"
 					class="btn-icon variant-filled-error"
