@@ -1,17 +1,10 @@
 <script lang="ts">
 	import type { Timer } from '../../../types/timer';
-	import * as Tone from 'tone';
+	import type { AudioContext, GainNode, OscillatorNode } from 'standardized-audio-context';
 
 	export let timerData: Timer;
-	export let soundEnabled: boolean;
+	export let audioContext: AudioContext;
 	export let timeOffset: number;
-
-	const synth = new Tone.Synth({
-		onsilence: () => {
-			console.log('silence');
-			soundPlaying = false;
-		}
-	}).toDestination();
 
 	const zeroPad = (num: number, places: number) => String(num).padStart(places, '0');
 	const getTimerText = (millis: number) => {
@@ -31,27 +24,38 @@
 		return remaningHours + ':' + remaningMinutes + ':' + remaningSeconds;
 	};
 
-	const playCountdown = async () => {
-		if (soundPlaying || !soundEnabled) {
+	const playBeep = async (frequency: number, duration: number, volume: number) => {
+		if (audioContext.state !== 'running') {
 			return;
 		}
-		soundPlaying = true;
-		const now = Tone.now();
-		synth.triggerAttackRelease('C4', '8n', now);
-		synth.triggerAttackRelease('C4', '8n', now + 1);
-		synth.triggerAttackRelease('C4', '8n', now + 2);
-		synth.triggerAttackRelease('C4', '8n', now + 3);
-		synth.triggerAttackRelease('C4', '8n', now + 4);
-		synth.triggerAttackRelease('C3', '2n', now + 5);
+
+		const gainNode = audioContext.createGain();
+		gainNode.connect(audioContext.destination);
+		const oscillatorNode = audioContext.createOscillator();
+		oscillatorNode.connect(gainNode);
+
+		oscillatorNode.type = 'sine';
+
+		oscillatorNode.frequency.setValueAtTime(frequency, audioContext.currentTime);
+		gainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.02);
+		gainNode.gain.setTargetAtTime(0, audioContext.currentTime + duration / 1000, 0.02);
+
+		oscillatorNode.start();
 	};
 
-	const playBeep = async () => {
-		if (soundPlaying || !soundEnabled) {
-			return;
+	const playCurrentSound = (seconds: number) => {
+		if (lastSoundPlayed == seconds) return;
+
+		lastSoundPlayed = seconds;
+		if (seconds == 60) {
+			playBeep(463, 1000, 0.5);
 		}
-		soundPlaying = true;
-		const now = Tone.now();
-		synth.triggerAttackRelease('C5', '2n', now);
+
+		if (seconds == 0) {
+			playBeep(158, 1000, 1);
+		} else if (seconds <= 5) {
+			playBeep(463, 200, 0.5);
+		}
 	};
 
 	const calculateCurrentSegment = () => {
@@ -77,19 +81,15 @@
 		let currentSegmentIndex = 0;
 		let timeInCurrentSegment = 0;
 		while (timeInCurrentRound > 0) {
-			timeInCurrentSegment = segments[currentSegmentIndex].time - timeInCurrentRound;
+			timeInCurrentSegment = Math.floor(segments[currentSegmentIndex].time - timeInCurrentRound);
 			timeInCurrentRound -= segments[currentSegmentIndex].time;
 			currentSegmentIndex++;
 		}
 
 		const currentSegment = segments[currentSegmentIndex - 1];
 
-		if (currentSegment.sound && Math.floor(timeInCurrentSegment / 1000) == 60) {
-			playBeep();
-		}
-
-		if (currentSegment.sound && Math.floor(timeInCurrentSegment / 1000) == 5) {
-			playCountdown();
+		if (currentSegment.sound) {
+			playCurrentSound(Math.floor(timeInCurrentSegment / 1000));
 		}
 
 		return {
@@ -98,8 +98,10 @@
 			seconds: Math.floor(timeInCurrentSegment / 1000)
 		};
 	};
-	let soundPlaying = false;
+
+	let lastSoundPlayed = -1;
 	let currentSegment = calculateCurrentSegment();
+
 	$: {
 		setInterval(() => {
 			currentSegment = calculateCurrentSegment();

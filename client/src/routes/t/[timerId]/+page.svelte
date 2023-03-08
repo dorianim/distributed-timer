@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { Modal, type ModalSettings, modalStore, ProgressRadial } from '@skeletonlabs/skeleton';
-	import * as Tone from 'tone';
 	import type { PageData } from './$types';
 	import { get } from 'svelte/store';
 	import screenfull from 'screenfull';
 	import Timer from './Timer.svelte';
 	import type { Timer as TimerType } from '../../../types/timer';
 	import { API_WS_URL } from '../../../stores';
-	import { onMount } from 'svelte';
+	import { AudioContext } from 'standardized-audio-context';
 
 	export let data: PageData;
 
-	let soundEnabled = false;
+	const audioContext = new AudioContext();
+	console.log(audioContext.state);
+
+	let soundEnabled: boolean;
 	let timeOffset: number | undefined;
 	let timerData: TimerType | undefined;
 	let lastGetTimeSent = 0;
@@ -44,12 +46,18 @@
 		}
 
 		timeOffset = sum / latestOffsets.length;
-		console.log(timeOffset);
-		console.log(latestOffsets);
 	};
 
 	const enableSound = () => {
-		Tone.start().then(() => (soundEnabled = true));
+		audioContext
+			.resume()
+			.then(() => {
+				soundEnabled = true;
+			})
+			.catch((e) => {
+				console.error(e);
+				soundEnabled = false;
+			});
 	};
 
 	const initSocket = () => {
@@ -58,7 +66,7 @@
 		// Listen for messages
 		socket.addEventListener('message', (event) => {
 			const data = JSON.parse(event.data);
-			console.log(data);
+
 			switch (data.type) {
 				case 'Timer':
 					timerData = data.data;
@@ -100,7 +108,7 @@
 		}, 1000);
 	};
 
-	Tone.start().then(() => (soundEnabled = true));
+	enableSound();
 
 	$: {
 		if (!socket) {
@@ -132,7 +140,7 @@
 </script>
 
 {#if socket?.readyState === 1 && timerData && timeOffset}
-	<Timer {timerData} {soundEnabled} {timeOffset} />
+	<Timer {timerData} {audioContext} {timeOffset} />
 {:else}
 	<div
 		class="absolute top-0 h-[100vh] left-[50%] translate-x-[-50%] flex items-center justify-center"
