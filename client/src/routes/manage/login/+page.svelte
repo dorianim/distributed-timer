@@ -53,9 +53,12 @@
 			<LoginForm {onSubmit} />
 		{/if}
 	{:catch error}
-		<aside class="alert variant-ghost-error mb-4 p-2 pl-4">
+		<aside class="alert variant-ghost-error">
 			<Fa icon={faCircleExclamation} class="text-2xl" />
-			<h3 class="alert-message">Error: {error}</h3>
+			<div class="alert-message">
+				<h3>Error</h3>
+				<p>{error}</p>
+			</div>
 			<button
 				class="btn-icon"
 				on:click={() => {

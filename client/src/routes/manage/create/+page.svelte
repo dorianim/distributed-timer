@@ -45,23 +45,19 @@
 		</div>
 	{:then result}
 		{#if result}
-			<aside class="alert variant-ghost-success mb-4 p-2 pl-4">
-				<Fa icon={faCircleCheck} class="text-2xl" />
-				<h3 class="alert-message">Success</h3>
-				<button
-					class="btn variant-filled-success"
-					on:click={() => {
-						goto(`/manage/${result}`);
-					}}>Manage timer</button
-				>
-			</aside>
+			<div class="flex items-center justify-center">
+				<ProgressRadial class="w-10" />
+			</div>
 		{:else}
 			<CreateTimerForm {onSubmit} />
 		{/if}
 	{:catch error}
-		<aside class="alert variant-ghost-error mb-4 p-2 pl-4">
+		<aside class="alert variant-ghost-error">
 			<Fa icon={faCircleExclamation} class="text-2xl" />
-			<h3 class="alert-message">Error: {error}</h3>
+			<div class="alert-message">
+				<h3>Error</h3>
+				<p>{error}</p>
+			</div>
 			<button
 				class="btn-icon"
 				on:click={() => {
