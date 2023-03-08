@@ -12,7 +12,7 @@
 
 	export let data: PageData;
 	let { timerData } = data;
-	let submitResult: Promise<Timer> | undefined;
+	let submitResult: Promise<Timer | void> = Promise.resolve();
 
 	$: {
 		if (browser && !localStorage.getItem('token')) goto('/manage/login');
@@ -55,7 +55,7 @@
 				<button
 					class="btn-icon"
 					on:click={() => {
-						submitResult = undefined;
+						submitResult = Promise.resolve();
 					}}><Fa icon={faClose} /></button
 				>
 			</aside>
@@ -71,7 +71,7 @@
 			<button
 				class="btn-icon"
 				on:click={() => {
-					submitResult = undefined;
+					submitResult = Promise.resolve();
 				}}><Fa icon={faClose} /></button
 			>
 		</div>
@@ -80,6 +80,7 @@
 </div>
 
 <div class="m-auto text-center">
-	Alternatively, you can <a href="/">view an existing timer</a> or
-	<a href="/manage/login">manage an existing timer</a>
+	Alternatively, you can <a href="/">view an existing timer</a>,
+	<a href="/manage/login">manage a diffrent existing timer</a> or
+	<a href="/manage/create">create a new timer</a>
 </div>

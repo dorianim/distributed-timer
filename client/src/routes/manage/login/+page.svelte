@@ -10,7 +10,7 @@
 
 	export let data: PageData;
 	const { fetch } = data;
-	let submitResult: Promise<string> | undefined;
+	let submitResult: Promise<string | void> = Promise.resolve();
 
 	const onSubmit = async (id: string, password: string) => {
 		submitResult = fetch(`${get(API_URL)}/timer/token`, {
@@ -62,7 +62,7 @@
 			<button
 				class="btn-icon"
 				on:click={() => {
-					submitResult = undefined;
+					submitResult = Promise.resolve();
 				}}><Fa icon={faClose} /></button
 			>
 		</aside>

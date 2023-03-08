@@ -11,7 +11,15 @@
 
 	export let data: PageData;
 	const { fetch } = data;
-	let submitResult: Promise<string> | undefined;
+	let submitResult: Promise<string | void> = Promise.resolve();
+
+	interface ErrorMessages {
+		[key: number]: string;
+	}
+
+	const errorMessages: ErrorMessages = {
+		409: 'A timer with that name already exists'
+	};
 
 	const onSubmit = (timerData: TimerCreationRequest) => {
 		submitResult = fetch(`${get(API_URL)}/timer`, {
@@ -22,9 +30,12 @@
 			}
 		})
 			.then((res) => {
-				if (!res.ok) {
+				if (!res.ok && res.status in errorMessages) {
+					throw new Error(errorMessages[res.status]);
+				} else if (!res.ok) {
 					throw new Error(res.statusText);
 				}
+
 				return res.json();
 			})
 			.then((data) => {
@@ -61,7 +72,7 @@
 			<button
 				class="btn-icon"
 				on:click={() => {
-					submitResult = undefined;
+					submitResult = Promise.resolve();
 				}}><Fa icon={faClose} /></button
 			>
 		</aside>
