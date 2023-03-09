@@ -55,20 +55,20 @@ If you'd like to self-host, you can also use docker:
 
   ```yaml
   services:
-  timer:
-    image: ghcr.io/dorianim/distributed-timer:latest
-    environment:
-      JWT_KEY: some-random-string
-      REDIS_STRING: "redis://:@redis/0"
-    ports:
-      - 3000:3000
-    depends_on:
-      - redis
+    timer:
+      image: ghcr.io/dorianim/distributed-timer:latest
+      environment:
+        JWT_KEY: some-random-string
+        REDIS_STRING: "redis://:@redis/0"
+      ports:
+        - 3000:3000
+      depends_on:
+        - redis
 
-  redis:
-    image: docker.io/redis
-    volumes:
-      - ./redis-data:/data
+    redis:
+      image: docker.io/redis
+      volumes:
+        - ./redis-data:/data
   ```
 
   Make sure, to replace the JWT_KEY.
