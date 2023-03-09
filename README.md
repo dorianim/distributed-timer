@@ -31,13 +31,13 @@ A simple, distributed timer, originally designed for bouldering for competitions
     </tr>
     <tr>
         <td align="center">
-            <a href="https://raw.githubusercontent.com/dorianim/distributed-timer/main/.github/media/screenshot-2.png">
-                <img src="https://raw.githubusercontent.com/dorianim/distributed-timer/main/.github/media/screenshot-2.png" width="500px" />
+            <a href="https://raw.githubusercontent.com/dorianim/distributed-timer/main/.github/media/screenshot-3.png">
+                <img src="https://raw.githubusercontent.com/dorianim/distributed-timer/main/.github/media/screenshot-3.png" width="500px" />
             </a>
         </td>
         <td align="center">
-            <a href="https://raw.githubusercontent.com/dorianim/distributed-timer/main/.github/media/screenshot-2.png">
-                <img src="https://raw.githubusercontent.com/dorianim/distributed-timer/main/.github/media/screenshot-2.png" width="500px" />
+            <a href="https://raw.githubusercontent.com/dorianim/distributed-timer/main/.github/media/screenshot-3.png">
+                <img src="https://raw.githubusercontent.com/dorianim/distributed-timer/main/.github/media/screenshot-3.png" width="500px" />
             </a>
         </td>
     </tr>
