@@ -91,7 +91,7 @@ async fn auth_middleware<B>(
     next: Next<B>,
 ) -> Result<Response, StatusCode> {
     let mut validation = Validation::new(Algorithm::default());
-    validation.set_issuer(&["de:itsblue:synced-timer"]);
+    validation.set_issuer(&["de:itsblue:distributed-timer"]);
     validation.validate_exp = false;
 
     let token = decode::<Claims>(
@@ -141,7 +141,7 @@ fn create_jwt(id: String, key: &str) -> String {
     let claims = Claims {
         id: id,
         exp: 0,
-        iss: "de:itsblue:synced-timer".to_string(),
+        iss: "de:itsblue:distributed-timer".to_string(),
     };
 
     encode(

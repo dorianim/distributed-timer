@@ -8,13 +8,13 @@ RUN apk add --no-cache build-base nodejs npm ca-certificates
 RUN echo $(rustup show | head -n 1 | awk '{print $NF}') > /platform
 # TODO: remove once 1.68 is released
 RUN rustup update nightly
-RUN cargo +nightly -Z sparse-registry build --release --target $(cat /platform) --bin boulder-timer
-RUN mv target/$(cat /platform)/release/boulder-timer boulder-timer
+RUN cargo +nightly -Z sparse-registry build --release --target $(cat /platform) --bin distributed-timer
+RUN mv target/$(cat /platform)/release/distributed-timer distributed-timer
 
 FROM scratch
 COPY --from=build \
     /etc/ssl/certs/ca-certificates.crt \
     /etc/ssl/certs/ca-certificates.crt
-COPY --from=build /build/boulder-timer /boulder-timer
+COPY --from=build /build/distributed-timer /distributed-timer
 EXPOSE 3000
-CMD ["/boulder-timer"]
+CMD ["/distributed-timer"]
