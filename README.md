@@ -79,7 +79,7 @@ If you'd like to self-host, you can also use docker:
 
 ## binary
 
-To build for development, you need:
+To build a binary, you need:
 
 - cargo >= 1.67.1
 - npm >= 8.19.2
