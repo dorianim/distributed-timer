@@ -34,7 +34,7 @@ enum WSMessage {
     GetTime,
     Timer(TimerResponse),
     Timestamp(u128),
-    Error(String),
+    Error((u128, String)),
 }
 
 struct WsConnection {}
@@ -176,7 +176,7 @@ impl WsMessageHandler {
         match message {
             WSMessage::GetTime => self.handle_message_gettime().await,
             WSMessage::Hello(id) => self.handle_message_hello(id).await,
-            _ => WSMessage::Error("Invalid message type".to_owned()),
+            _ => WSMessage::Error((400, "Invalid message type".to_owned())),
         }
     }
 
@@ -191,13 +191,17 @@ impl WsMessageHandler {
 
     async fn handle_message_hello(&mut self, id: String) -> WSMessage {
         if self.redis_listen_id_tx.is_closed() {
-            return WSMessage::Error("Already said hello!".to_owned());
+            return WSMessage::Error((400, "Already said hello!".to_owned()));
         }
 
         self.redis_listen_id_tx.send(id.clone()).await.unwrap();
 
-        let timer: Timer =
-            serde_json::from_str(&self.redis.get::<String, String>(id).await.unwrap()).unwrap();
+        let timer_string = self.redis.get::<String, String>(id).await;
+        if timer_string.is_err() {
+            return WSMessage::Error((404, "Timer not found!".to_owned()));
+        }
+
+        let timer: Timer = serde_json::from_str(&timer_string.unwrap()).unwrap();
 
         WSMessage::Timer(timer.into())
     }

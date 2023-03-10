@@ -8,6 +8,8 @@
 	import { API_WS_URL } from '../../../stores';
 	import { AudioContext } from 'standardized-audio-context';
 	import NoSleep from 'nosleep.js';
+	import { error } from '@sveltejs/kit';
+	import { goto } from '$app/navigation';
 
 	export let data: PageData;
 
@@ -61,6 +63,18 @@
 			});
 	};
 
+	const throwError = (code: number, message: string) => {
+		const d: ModalSettings = {
+			type: 'alert',
+			body: 'Error: ' + message,
+			buttonTextCancel: 'go back',
+			response: () => {
+				goto('/');
+			}
+		};
+		modalStore.trigger(d);
+	};
+
 	const initSocket = () => {
 		socket = new WebSocket(get(API_WS_URL));
 
@@ -77,6 +91,10 @@
 					const getTimeRoundTrip = now - lastGetTimeSent;
 					timeOffset = data.data + getTimeRoundTrip / 2 - now;
 					handleNewOffset(timeOffset);
+					break;
+				case 'Error':
+					throwError(data.data[0], data.data[1]);
+					break;
 			}
 		});
 
