@@ -29,11 +29,24 @@ pub struct Timer {
     pub id: String, // 5 random chars
 }
 
+#[derive(Serialize, Clone)]
+#[serde(tag = "type", content = "data")]
+enum DonationMethod {
+    PayPal(String),
+}
+
+#[derive(Serialize, Clone)]
+struct InstanceProperties {
+    demo: bool,
+    donation: Option<Vec<DonationMethod>>,
+}
+
 type SharedState = Arc<AppState>;
 pub struct AppState {
     redis: redis::aio::ConnectionManager,
     redis_client: redis::Client,
     jwt_key: String,
+    instance_properties: InstanceProperties,
 }
 
 #[tokio::main]
@@ -50,15 +63,24 @@ async fn main() {
         .await
         .unwrap();
 
+    let instance_properties = InstanceProperties {
+        demo: env::var("INSTANCE_DEMO").unwrap_or("false".to_owned()) == "true",
+        donation: env::var("INSTANCE_DONATION_PAYPAL")
+            .map(|id| Some(vec![DonationMethod::PayPal(id)]))
+            .unwrap_or(None),
+    };
+
     let state: SharedState = Arc::new(AppState {
         redis: manager,
         redis_client: client,
         jwt_key,
+        instance_properties,
     });
 
     let app = Router::new()
         .nest("/api/ws", routes::ws::routes())
         .nest("/api/timer", routes::timer::routes(state.clone()))
+        .nest("/api/instance", routes::instance::routes())
         .fallback(routes::client::client_assets)
         .layer(cors)
         .layer(
