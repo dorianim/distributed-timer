@@ -77,7 +77,7 @@ If you'd like to self-host, you can also use docker:
 
 # Build
 
-## For development
+## binary
 
 To build for development, you need:
 
@@ -86,6 +86,6 @@ To build for development, you need:
 
 To build, run `cargo build --release` in the repo.
 
-## For Docker
+## docker image
 
 To build the docker image, simply run `docker build . -t boulder-timer` in the repo.
