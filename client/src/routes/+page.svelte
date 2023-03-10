@@ -47,7 +47,7 @@
 				<b class="text-primary-500">
 					may be reset or taken down at any time without prior notice!
 				</b>
-				If you are interested a supported instance of this timer, please
+				If you are interested in a supported instance of this timer, please
 				<a href="mailto:boulder-timer@dorian.im">reach out to us</a>.
 			{/if}
 
