@@ -39,7 +39,7 @@
 
 <h2 class="text-center">Manage existing timer</h2>
 
-<div class="p-4 w-full md:w-[70%] lg:w-[50%] m-auto items-center">
+<div class="w-full md:w-[70%] lg:w-[50%] m-auto items-center">
 	{#await submitResult}
 		<div class="flex items-center justify-center">
 			<ProgressRadial class="w-10" />
