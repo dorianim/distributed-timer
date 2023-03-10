@@ -13,6 +13,7 @@ A simple, distributed timer, originally designed for bouldering for competitions
 - set custom background colors
 - change color or labels without restarting the timer
 - start the timer at a scheduled point of time in the future
+- prevent a device showing the time from going to sleep
 
 ## Screenshots
 
