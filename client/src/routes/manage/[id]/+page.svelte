@@ -42,7 +42,7 @@
 
 <h2 class="text-center">Manage timer <strong>{timerData.id}</strong></h2>
 
-<div class="p-4 m-auto items-center">
+<div class="p-4 m-auto w-full items-center">
 	{#await submitResult}
 		<div class="flex items-center justify-center">
 			<ProgressRadial class="w-10" />

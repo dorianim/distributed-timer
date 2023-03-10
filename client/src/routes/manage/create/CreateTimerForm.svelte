@@ -69,7 +69,7 @@
 	});
 </script>
 
-<form use:form class="grid gap-3">
+<form use:form class="w-full grid gap-3">
 	<label class="label">
 		<span>Enter a name for your timer:</span>
 		<input

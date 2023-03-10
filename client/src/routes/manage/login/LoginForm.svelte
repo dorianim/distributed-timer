@@ -10,7 +10,7 @@
 	};
 </script>
 
-<form class="grid gap-3" on:submit|preventDefault={handleSubmit}>
+<form class="w-full grid gap-3" on:submit|preventDefault={handleSubmit}>
 	<label class="label">
 		<span>Enter the name of your timer:</span>
 		<input

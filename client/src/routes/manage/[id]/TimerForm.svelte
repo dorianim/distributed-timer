@@ -99,11 +99,11 @@
 	$: console.log(formData);
 </script>
 
-<form class="grid gap-3" on:submit={handleSubmit}>
+<form class="w-full grid gap-3" on:submit={handleSubmit}>
 	<strong>Timer sequence:</strong>
 
 	{#each formData.segments as segment, i}
-		<div class="card p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-center">
+		<div class="card p-4 w-full grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-center">
 			<input
 				class="input variant-form-material"
 				type="text"
