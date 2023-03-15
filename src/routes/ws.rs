@@ -41,15 +41,15 @@ struct WsConnection {}
 
 impl WsConnection {
     async fn new(state: SharedState, socket: WebSocket) {
-        let mut connection = state.redis_client.get_async_connection().await.unwrap();
-        let _: () = redis::cmd("CONFIG")
-            .arg("SET")
-            .arg("notify-keyspace-events")
-            .arg("KEA")
-            .query_async(&mut connection)
-            .await
-            .unwrap();
-        let pubsub = connection.into_pubsub();
+        // let mut connection = state.redis_client.get_async_connection().await.unwrap();
+        // let _: () = redis::cmd("CONFIG")
+        //     .arg("SET")
+        //     .arg("notify-keyspace-events")
+        //     .arg("KEA")
+        //     .query_async(&mut connection)
+        //     .await
+        //     .unwrap();
+        // let pubsub = connection.into_pubsub();
 
         let (ws_sender, ws_receiver) = socket.split();
         let (ws_message_tx, ws_message_rx) = tokio::sync::mpsc::channel::<WSMessage>(32);
@@ -66,7 +66,7 @@ impl WsConnection {
             state.redis.clone(),
             ws_message_tx,
             redis_listen_id_rx,
-            pubsub,
+            state.redis_task_rx.resubscribe(),
         );
 
         ws_receiver_task.await.unwrap();
@@ -75,44 +75,11 @@ impl WsConnection {
         redis_listener_task.abort();
     }
 
-/*
-The Idea is to have a map of timer ids and the corresponding receiver and sender channels.
-The redis global will notice a change and send a message to every ws worker with the correct id.
-The ws worker will then send a message.
-The state is used to keep track of the receivers and senders.
- */
-    fn spawn_global_redis_listener_task(
-        mut redis: redis::aio::ConnectionManager,
-        state: SharedState,
-        mut pubsub: redis::aio::PubSub,
-    ) -> JoinHandle<()> {
-        tokio::spawn(async move {
-            pubsub
-                .psubscribe("__keyspace@*__:global")
-                .await
-                .unwrap();
-
-            let mut pubsub = pubsub.into_on_message();
-
-            while let Some(msg) = pubsub.next().await {
-                println!("Updated! {:?}", msg);
-
-                let timer_str = &redis.get::<String, String>("global".to_string()).await.unwrap();
-                let timer: Timer = serde_json::from_str(
-                    timer_str
-                )
-                .unwrap();
-
-                
-            }
-        })
-    }
-
     fn spawn_redis_listener_task(
         mut redis: redis::aio::ConnectionManager,
         ws_message_tx: Sender<WSMessage>,
         mut redis_listen_id_rx: Receiver<String>,
-        mut pubsub: redis::aio::PubSub,
+        mut redis_task_rx: tokio::sync::broadcast::Receiver<Timer>,
     ) -> JoinHandle<()> {
         tokio::spawn(async move {
             let mut msg = None;
@@ -121,25 +88,28 @@ The state is used to keep track of the receivers and senders.
             }
 
             let timer_id = msg.unwrap();
-            pubsub
-                .psubscribe(format!("__keyspace@*__:{}", &timer_id))
-                .await
-                .unwrap();
-            println!("Redis listening!");
-            redis_listen_id_rx.close();
+            // pubsub
+            //     .psubscribe(format!("__keyspace@*__:{}", &timer_id))
+            //     .await
+            //     .unwrap();
+            // println!("Redis listening!");
+            // redis_listen_id_rx.close();
 
-            let mut pubsub = pubsub.into_on_message();
+            // let mut pubsub = pubsub.into_on_message();
 
-            while let Some(msg) = pubsub.next().await {
-                println!("Updated! {:?}", msg);
+            while let Ok(timer) = redis_task_rx.recv().await {
+                if timer.id == timer_id {
+                    println!("Updated! {:?}", timer);
 
-                let timer: Timer = serde_json::from_str(
-                    &redis.get::<String, String>(timer_id.clone()).await.unwrap(),
-                )
-                .unwrap();
+                // let timer: Timer = serde_json::from_str(
+                //     &redis.get::<String, String>(timer_id.clone()).await.unwrap(),
+                // )
+                // .unwrap();
 
                 let response = WSMessage::Timer(timer.into());
                 ws_message_tx.send(response).await.unwrap();
+                }
+
             }
         })
     }
