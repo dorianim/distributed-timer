@@ -75,6 +75,39 @@ impl WsConnection {
         redis_listener_task.abort();
     }
 
+/*
+The Idea is to have a map of timer ids and the corresponding receiver and sender channels.
+The redis global will notice a change and send a message to every ws worker with the correct id.
+The ws worker will then send a message.
+The state is used to keep track of the receivers and senders.
+ */
+    fn spawn_global_redis_listener_task(
+        mut redis: redis::aio::ConnectionManager,
+        state: SharedState,
+        mut pubsub: redis::aio::PubSub,
+    ) -> JoinHandle<()> {
+        tokio::spawn(async move {
+            pubsub
+                .psubscribe("__keyspace@*__:global")
+                .await
+                .unwrap();
+
+            let mut pubsub = pubsub.into_on_message();
+
+            while let Some(msg) = pubsub.next().await {
+                println!("Updated! {:?}", msg);
+
+                let timer_str = &redis.get::<String, String>("global".to_string()).await.unwrap();
+                let timer: Timer = serde_json::from_str(
+                    timer_str
+                )
+                .unwrap();
+
+                
+            }
+        })
+    }
+
     fn spawn_redis_listener_task(
         mut redis: redis::aio::ConnectionManager,
         ws_message_tx: Sender<WSMessage>,

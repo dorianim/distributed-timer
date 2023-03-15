@@ -11,6 +11,10 @@ use tracing::Span;
 mod color;
 mod routes;
 
+use std::collections::HashMap;
+use tokio::sync::watch;
+use tokio::sync::RwLock;
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Segment {
     label: String,
@@ -47,6 +51,7 @@ pub struct AppState {
     redis_client: redis::Client,
     jwt_key: String,
     instance_properties: InstanceProperties,
+    redis_channel_map: RwLock<HashMap<String, (watch::Sender<Timer>, watch::Receiver<Timer>)>>,
 }
 
 #[tokio::main]
@@ -70,11 +75,15 @@ async fn main() {
             .unwrap_or(None),
     };
 
+    let redis_channel_map = HashMap::<String, (watch::Sender<Timer>, watch::Receiver<Timer>)>::new();
+    let redis_channel_map = RwLock::new(redis_channel_map);
+
     let state: SharedState = Arc::new(AppState {
         redis: manager,
         redis_client: client,
         jwt_key,
         instance_properties,
+        redis_channel_map: redis_channel_map,
     });
 
     let app = Router::new()
