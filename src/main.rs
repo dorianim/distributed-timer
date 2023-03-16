@@ -11,11 +11,7 @@ use tracing::Span;
 mod color;
 mod routes;
 
-use futures::StreamExt;
-use redis::AsyncCommands;
 use tokio::sync::broadcast;
-use tokio::task::JoinHandle;
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Segment {
     label: String,
@@ -54,46 +50,6 @@ pub struct AppState {
     redis_task_rx: broadcast::Receiver<Timer>,
 }
 
-fn spawn_global_redis_listener_task(
-    mut redis: redis::aio::ConnectionManager,
-    redis_client: redis::Client,
-    redis_task_tx: broadcast::Sender<Timer>,
-) -> JoinHandle<()> {
-    tokio::spawn(async move {
-        let mut connection = redis_client.get_async_connection().await.unwrap();
-        let _: () = redis::cmd("CONFIG")
-            .arg("SET")
-            .arg("notify-keyspace-events")
-            .arg("KEA")
-            .query_async(&mut connection)
-            .await
-            .unwrap();
-
-        let mut pubsub = connection.into_pubsub();
-
-        pubsub
-            .psubscribe("__keyspace@0__:*")
-            .await
-            .expect("Failed to subscribe to redis channel");
-
-        let mut pubsub = pubsub.into_on_message();
-
-        while let Some(msg) = pubsub.next().await {
-            println!("Updated! {:?}", msg);
-            let timer_id = msg.get_channel_name().split(":").last().unwrap();
-
-            let timer_str = &redis
-                .get::<String, String>(String::from(timer_id))
-                .await
-                .expect("Did not find timer in redis");
-            let timer: Timer = serde_json::from_str(timer_str).unwrap();
-
-            // Broadcast to all listeners
-            redis_task_tx.send(timer).unwrap();
-        }
-    })
-}
-
 #[tokio::main]
 async fn main() {
     let cors = CorsLayer::new()
@@ -117,17 +73,18 @@ async fn main() {
 
     let (redis_task_tx, redis_task_rx) = broadcast::channel::<Timer>(10);
 
-    spawn_global_redis_listener_task(manager.clone(), client.clone(), redis_task_tx);
-
     let state: SharedState = Arc::new(AppState {
-        redis: manager,
+        redis: manager.clone(),
         jwt_key,
         instance_properties,
         redis_task_rx,
     });
 
     let app = Router::new()
-        .nest("/api/ws", routes::ws::routes())
+        .nest(
+            "/api/ws",
+            routes::ws::routes(manager, client, redis_task_tx),
+        )
         .nest("/api/timer", routes::timer::routes(state.clone()))
         .nest("/api/instance", routes::instance::routes())
         .fallback(routes::client::client_assets)
