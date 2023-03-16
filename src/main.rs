@@ -11,6 +11,7 @@ use tracing::Span;
 mod color;
 mod routes;
 
+use tokio::sync::broadcast;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Segment {
     label: String,
@@ -19,7 +20,7 @@ pub struct Segment {
     color: Option<Color>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Timer {
     // Return after TimerRequest
     pub segments: Vec<Segment>,
@@ -44,9 +45,9 @@ struct InstanceProperties {
 type SharedState = Arc<AppState>;
 pub struct AppState {
     redis: redis::aio::ConnectionManager,
-    redis_client: redis::Client,
     jwt_key: String,
     instance_properties: InstanceProperties,
+    redis_task_rx: broadcast::Receiver<Timer>,
 }
 
 #[tokio::main]
@@ -58,7 +59,7 @@ async fn main() {
 
     let redis_string = env::var("REDIS_STRING").expect("REDIS_STRING is not set");
     let jwt_key = env::var("JWT_KEY").expect("JWT_KEY is not set");
-    let client = redis::Client::open(redis_string.to_owned()).unwrap();
+    let client = redis::Client::open(redis_string.to_owned()).expect("Could not connect to redis");
     let manager = redis::aio::ConnectionManager::new(client.clone())
         .await
         .unwrap();
@@ -70,23 +71,28 @@ async fn main() {
             .unwrap_or(None),
     };
 
+    let (redis_task_tx, redis_task_rx) = broadcast::channel::<Timer>(10);
+
     let state: SharedState = Arc::new(AppState {
-        redis: manager,
-        redis_client: client,
+        redis: manager.clone(),
         jwt_key,
         instance_properties,
+        redis_task_rx,
     });
 
     let app = Router::new()
-        .nest("/api/ws", routes::ws::routes())
+        .nest(
+            "/api/ws",
+            routes::ws::routes(manager, client, redis_task_tx),
+        )
         .nest("/api/timer", routes::timer::routes(state.clone()))
         .nest("/api/instance", routes::instance::routes())
         .fallback(routes::client::client_assets)
         .layer(cors)
         .layer(
             TraceLayer::new_for_http()
-                .on_request(|_request: &Request<_>, _span: &Span| {
-                    println!("Request {}", _request.uri());
+                .on_request(|request: &Request<_>, _span: &Span| {
+                    println!("Request {} {}", request.method(), request.uri());
                 })
                 .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
                     println!(
