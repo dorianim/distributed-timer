@@ -49,7 +49,6 @@ struct InstanceProperties {
 type SharedState = Arc<AppState>;
 pub struct AppState {
     redis: redis::aio::ConnectionManager,
-    redis_client: redis::Client,
     jwt_key: String,
     instance_properties: InstanceProperties,
     redis_task_rx: broadcast::Receiver<Timer>,
@@ -86,7 +85,7 @@ fn spawn_global_redis_listener_task(
             let timer_str = &redis
                 .get::<String, String>(String::from(timer_id))
                 .await
-                .unwrap();
+                .expect("Did not find timer in redis");
             let timer: Timer = serde_json::from_str(timer_str).unwrap();
 
             // Broadcast to all listeners
@@ -116,13 +115,12 @@ async fn main() {
             .unwrap_or(None),
     };
 
-    let (redis_task_tx, mut redis_task_rx) = broadcast::channel::<Timer>(10);
+    let (redis_task_tx, redis_task_rx) = broadcast::channel::<Timer>(10);
 
     spawn_global_redis_listener_task(manager.clone(), client.clone(), redis_task_tx);
 
     let state: SharedState = Arc::new(AppState {
         redis: manager,
-        redis_client: client,
         jwt_key,
         instance_properties,
         redis_task_rx,

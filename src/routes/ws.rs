@@ -41,16 +41,6 @@ struct WsConnection {}
 
 impl WsConnection {
     async fn new(state: SharedState, socket: WebSocket) {
-        // let mut connection = state.redis_client.get_async_connection().await.unwrap();
-        // let _: () = redis::cmd("CONFIG")
-        //     .arg("SET")
-        //     .arg("notify-keyspace-events")
-        //     .arg("KEA")
-        //     .query_async(&mut connection)
-        //     .await
-        //     .unwrap();
-        // let pubsub = connection.into_pubsub();
-
         let (ws_sender, ws_receiver) = socket.split();
         let (ws_message_tx, ws_message_rx) = tokio::sync::mpsc::channel::<WSMessage>(32);
         let (redis_listen_id_tx, redis_listen_id_rx) = tokio::sync::mpsc::channel::<String>(32);
@@ -63,7 +53,6 @@ impl WsConnection {
             ws_receiver,
         );
         let redis_listener_task = WsConnection::spawn_redis_listener_task(
-            state.redis.clone(),
             ws_message_tx,
             redis_listen_id_rx,
             state.redis_task_rx.resubscribe(),
@@ -76,7 +65,6 @@ impl WsConnection {
     }
 
     fn spawn_redis_listener_task(
-        mut redis: redis::aio::ConnectionManager,
         ws_message_tx: Sender<WSMessage>,
         mut redis_listen_id_rx: Receiver<String>,
         mut redis_task_rx: tokio::sync::broadcast::Receiver<Timer>,
@@ -88,28 +76,14 @@ impl WsConnection {
             }
 
             let timer_id = msg.unwrap();
-            // pubsub
-            //     .psubscribe(format!("__keyspace@*__:{}", &timer_id))
-            //     .await
-            //     .unwrap();
-            // println!("Redis listening!");
-            // redis_listen_id_rx.close();
-
-            // let mut pubsub = pubsub.into_on_message();
 
             while let Ok(timer) = redis_task_rx.recv().await {
                 if timer.id == timer_id {
                     println!("Updated! {:?}", timer);
 
-                // let timer: Timer = serde_json::from_str(
-                //     &redis.get::<String, String>(timer_id.clone()).await.unwrap(),
-                // )
-                // .unwrap();
-
-                let response = WSMessage::Timer(timer.into());
-                ws_message_tx.send(response).await.unwrap();
+                    let response = WSMessage::Timer(timer.into());
+                    ws_message_tx.send(response).await.unwrap();
                 }
-
             }
         })
     }
