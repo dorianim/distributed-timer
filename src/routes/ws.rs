@@ -210,7 +210,7 @@ fn spawn_global_redis_listener_task(
         let mut pubsub = connection.into_pubsub();
 
         pubsub
-            .psubscribe("__keyspace@0__:*")
+            .psubscribe("__keyspace@*__:*")
             .await
             .expect("Failed to subscribe to redis channel");
 
