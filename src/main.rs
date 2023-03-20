@@ -80,11 +80,10 @@ async fn main() {
         redis_task_rx,
     });
 
+    routes::ws::spawn_global_redis_listener_task(manager, client, redis_task_tx);
+
     let app = Router::new()
-        .nest(
-            "/api/ws",
-            routes::ws::routes(manager, client, redis_task_tx),
-        )
+        .nest("/api/ws", routes::ws::routes())
         .nest("/api/timer", routes::timer::routes(state.clone()))
         .nest("/api/instance", routes::instance::routes())
         .fallback(routes::client::client_assets)

@@ -192,7 +192,7 @@ pub async fn ws_handler(
     ws.on_upgrade(move |socket| WsConnection::new(state, socket))
 }
 
-fn spawn_global_redis_listener_task(
+pub fn spawn_global_redis_listener_task(
     mut redis: redis::aio::ConnectionManager,
     redis_client: redis::Client,
     redis_task_tx: broadcast::Sender<Timer>,
@@ -232,11 +232,6 @@ fn spawn_global_redis_listener_task(
     })
 }
 
-pub fn routes(
-    redis: redis::aio::ConnectionManager,
-    redis_client: redis::Client,
-    redis_task_tx: broadcast::Sender<Timer>,
-) -> Router<SharedState> {
-    spawn_global_redis_listener_task(redis, redis_client, redis_task_tx);
+pub fn routes() -> Router<SharedState> {
     Router::new().route("/", get(ws_handler))
 }
