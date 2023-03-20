@@ -45,9 +45,6 @@
 		"nosleep.js": "^0.12.0",
 		"npm": "^9.6.0",
 		"screenfull": "^6.0.2",
-		"socket.io": "^4.6.1",
-		"socket.io-client": "^4.6.1",
-		"standardized-audio-context": "^25.3.41",
 		"svelte-fa": "^3.0.3",
 		"yup": "^0.32.11"
 	}

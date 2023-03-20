@@ -1,11 +1,9 @@
 <script lang="ts">
 	import type { Timer } from '../../../types/timer';
-	import type { AudioContext, GainNode, OscillatorNode } from 'standardized-audio-context';
-	import type { Action } from 'svelte/types/runtime/action';
 	import { onMount } from 'svelte';
 
 	export let timerData: Timer;
-	export let audioContext: AudioContext;
+	export let soundEnabled: boolean;
 	export let timeOffset: number;
 
 	const zeroPad = (num: number, places: number) => String(num).padStart(places, '0');
@@ -26,38 +24,33 @@
 		return remaningHours + ':' + remaningMinutes + ':' + remaningSeconds;
 	};
 
-	const playBeep = async (frequency: number, duration: number, volume: number) => {
-		if (audioContext.state !== 'running') {
-			return;
+	const preloadSounds = (sounds: string[]) => {
+		let audios: { [sound: string]: HTMLAudioElement } = {};
+		for (const sound of sounds) {
+			console.log('preloading sound: ', sound);
+			const audio = new Audio(sound);
+			audio.load();
+			audios[sound] = audio;
 		}
+		return audios;
+	};
 
-		const gainNode = audioContext.createGain();
-		gainNode.connect(audioContext.destination);
-		const oscillatorNode = audioContext.createOscillator();
-		oscillatorNode.connect(gainNode);
+	const playSoundAt = (playAtSeconds: number, currentSeconds: number, sound: string) => {
+		if (!audios) return;
 
-		oscillatorNode.type = 'sawtooth';
+		const audio = audios[sound];
 
-		oscillatorNode.frequency.setValueAtTime(frequency, audioContext.currentTime);
-		gainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.02);
-		gainNode.gain.setTargetAtTime(0, audioContext.currentTime + duration / 1000, 0.02);
-
-		oscillatorNode.start();
+		if (playAtSeconds === currentSeconds && audio.paused) {
+			console.log('playing sound: ', sound, 'at', currentSeconds, 'seconds remaining');
+			audio.play();
+		}
 	};
 
 	const playCurrentSound = (seconds: number) => {
-		if (lastSoundPlayed == seconds) return;
+		if (!soundEnabled || !audios) return;
 
-		lastSoundPlayed = seconds;
-		if (seconds == 60) {
-			playBeep(463, 1000, 0.5);
-		}
-
-		if (seconds == 0) {
-			playBeep(158, 1000, 1);
-		} else if (seconds <= 5) {
-			playBeep(463, 200, 0.5);
-		}
+		playSoundAt(60, seconds, '/sound/beep.mp3');
+		playSoundAt(5, seconds, '/sound/countdown.mp3');
 	};
 
 	const calculateCurrentSegment: () => {
@@ -115,28 +108,37 @@
 		};
 	};
 
-	let lastSoundPlayed = -1;
+	const update = () => {
+		const { timerText, label, color, seconds } = calculateCurrentSegment();
+
+		if (timerSpan.innerText !== timerText) {
+			timerSpan.innerText = timerText;
+			labelSpan.innerText = label;
+			backgroundDiv.style.setProperty(
+				`--backgroundColor`,
+				color ?? 'rgb(var(--color-surface-900))'
+			);
+		}
+		playCurrentSound(seconds);
+	};
+
+	let audios: { [sound: string]: HTMLAudioElement } | undefined;
 	let currentSegment = calculateCurrentSegment();
 	let backgroundDiv: HTMLElement;
+	let labelSpan: HTMLElement;
+	let timerSpan: HTMLElement;
 
 	onMount(() => {
 		setInterval(() => {
-			currentSegment = calculateCurrentSegment();
+			update();
 		}, 100);
 	});
 
 	$: {
-		if (backgroundDiv && currentSegment) {
-			backgroundDiv.style.setProperty(
-				`--backgroundColor`,
-				currentSegment.color ?? 'rgb(var(--color-surface-900))'
-			);
-		}
-	}
-
-	$: {
-		if (currentSegment.sound) {
-			playCurrentSound(currentSegment.seconds);
+		if (soundEnabled) {
+			audios = preloadSounds(['/sound/beep.mp3', '/sound/countdown.mp3']);
+		} else {
+			audios = undefined;
 		}
 	}
 </script>
@@ -145,12 +147,14 @@
 	bind:this={backgroundDiv}
 	class="absolute top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] overflow-hidden h-[100vh] w-[100vw] flex items-center justify-center background-color"
 >
-	<span class="absolute top-[10%] left-[50%] translate-x-[-50%] translate-y-[-50%] text-[5vw]"
-		>{currentSegment.label}</span
-	>
-	<span class={currentSegment.timerText.length > 5 ? 'text-[23.5vw]' : 'text-[35vw]'}>
-		{currentSegment.timerText}
-	</span>
+	<span
+		bind:this={labelSpan}
+		class="absolute top-[10%] left-[50%] translate-x-[-50%] translate-y-[-50%] text-[5vw]"
+	/>
+	<span
+		bind:this={timerSpan}
+		class={currentSegment.timerText.length > 5 ? 'text-[23.5vw]' : 'text-[35vw]'}
+	/>
 </div>
 
 <style>

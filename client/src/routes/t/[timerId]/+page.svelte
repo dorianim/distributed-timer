@@ -1,19 +1,16 @@
 <script lang="ts">
-	import { Modal, type ModalSettings, modalStore, ProgressRadial } from '@skeletonlabs/skeleton';
+	import { type ModalSettings, modalStore, ProgressRadial } from '@skeletonlabs/skeleton';
 	import type { PageData } from './$types';
 	import { get } from 'svelte/store';
 	import screenfull from 'screenfull';
 	import Timer from './Timer.svelte';
 	import type { Timer as TimerType } from '../../../types/timer';
 	import { API_WS_URL } from '../../../stores';
-	import { AudioContext } from 'standardized-audio-context';
 	import NoSleep from 'nosleep.js';
-	import { error } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 
 	export let data: PageData;
 
-	const audioContext = new AudioContext();
 	const noSleep = new NoSleep();
 
 	let soundEnabled: boolean;
@@ -52,13 +49,13 @@
 	};
 
 	const enableSound = () => {
-		audioContext
-			.resume()
+		new Audio('/sound/silence.mp3')
+			.play()
 			.then(() => {
 				soundEnabled = true;
 			})
 			.catch((e) => {
-				console.error(e);
+				console.error('Sound is disabled');
 				soundEnabled = false;
 			});
 	};
@@ -160,7 +157,7 @@
 </script>
 
 {#if timerData && timeOffset}
-	<Timer {timerData} {audioContext} {timeOffset} />
+	<Timer {timerData} {soundEnabled} {timeOffset} />
 {:else}
 	<div
 		class="absolute top-0 h-[100vh] left-[50%] translate-x-[-50%] flex items-center justify-center"
