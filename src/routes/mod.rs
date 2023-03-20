@@ -1,4 +1,4 @@
-pub mod client;
-pub mod timer;
-pub mod ws;
 pub mod instance;
+pub mod timer;
+pub mod web;
+pub mod ws;

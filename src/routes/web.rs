@@ -6,20 +6,20 @@ use axum::{
 use rust_embed::{EmbeddedFile, RustEmbed};
 
 #[derive(RustEmbed)]
-#[folder = "client/build"]
-struct ClientAssets;
+#[folder = "web/build"]
+struct WebAssets;
 
-pub async fn client_assets(uri: Uri) -> impl IntoResponse {
+pub async fn web_assets(uri: Uri) -> impl IntoResponse {
     let path = uri.path().trim_start_matches('/');
 
-    match ClientAssets::get(path) {
+    match WebAssets::get(path) {
         Some(file) => response(file, path),
         None => index(),
     }
 }
 
 fn index() -> Response {
-    match ClientAssets::get("200.html") {
+    match WebAssets::get("200.html") {
         Some(file) => response(file, "200.html"),
         None => not_found(),
     }

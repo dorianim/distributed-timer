@@ -86,7 +86,7 @@ async fn main() {
         .nest("/api/ws", routes::ws::routes())
         .nest("/api/timer", routes::timer::routes(state.clone()))
         .nest("/api/instance", routes::instance::routes())
-        .fallback(routes::client::client_assets)
+        .fallback(routes::web::web_assets)
         .layer(cors)
         .layer(
             TraceLayer::new_for_http()

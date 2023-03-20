@@ -1,6 +1,6 @@
-client/node_modules
-client/build
-client/.svelte-kit
+web/node_modules
+web/build
+web/.svelte-kit
 target
 Dockerfile
 .dockerignore
