@@ -21,11 +21,18 @@ pub struct Segment {
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
+pub struct DisplayOptions {
+    clock: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Timer {
     // Return after TimerRequest
     pub segments: Vec<Segment>,
     pub repeat: bool,
+    pub display_options: Option<DisplayOptions>,
     pub start_at: u64,
+    pub stop_at: Option<u64>,
     pub password: String,
     pub id: String, // 5 random chars
 }

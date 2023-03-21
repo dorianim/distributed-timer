@@ -1,4 +1,4 @@
-use crate::SharedState;
+use crate::{DisplayOptions, SharedState};
 use crate::{Segment, Timer};
 use axum::extract::{Path, State};
 use axum::http::{Request, StatusCode};
@@ -28,7 +28,9 @@ pub struct TimerResponse {
     pub segments: Vec<Segment>,
     pub id: String,
     pub repeat: bool,
+    pub display_options: DisplayOptions,
     pub start_at: u64,
+    pub stop_at: Option<u64>,
 }
 
 impl Into<TimerResponse> for Timer {
@@ -37,7 +39,9 @@ impl Into<TimerResponse> for Timer {
             segments: self.segments,
             id: self.id,
             repeat: self.repeat,
+            display_options: self.display_options.unwrap_or(DisplayOptions::default()),
             start_at: self.start_at,
+            stop_at: self.stop_at,
         }
     }
 }
@@ -63,7 +67,9 @@ struct TimerUpdateRequest {
     // Get from User
     segments: Vec<Segment>,
     repeat: bool,
+    pub display_options: Option<DisplayOptions>,
     start_at: u64,
+    stop_at: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -193,6 +199,8 @@ async fn create_timer(
         segments: request.segments,
         repeat: request.repeat,
         start_at: request.start_at,
+        stop_at: None,
+        display_options: None,
         password,
         id: request.id,
     };
@@ -231,7 +239,9 @@ async fn update_timer(
     let timer = Timer {
         segments: request.segments,
         repeat: request.repeat,
+        display_options: request.display_options,
         start_at: request.start_at,
+        stop_at: request.stop_at,
         ..old_timer
     };
 
