@@ -1,3 +1,4 @@
+import type { DisplayOptions } from './displayOptions';
 import type { Segment } from './segment';
 
 export interface TimerCreationRequest {
@@ -17,6 +18,8 @@ export interface TimerUpdateRequest {
 export interface Timer {
 	id: string;
 	start_at: number;
+	stop_at?: number;
 	repeat: boolean;
+	display_options: DisplayOptions;
 	segments: Segment[];
 }

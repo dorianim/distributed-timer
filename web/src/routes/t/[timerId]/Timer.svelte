@@ -1,10 +1,13 @@
 <script lang="ts">
 	import type { Timer } from '../../../types/timer';
 	import { onMount } from 'svelte';
+	import type { DisplayOptions } from '../../../types/displayOptions';
+	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from '../../../utils/timer';
 
 	export let timerData: Timer;
 	export let soundEnabled: boolean;
 	export let timeOffset: number;
+	export let displayOptionsOverride: DisplayOptions | undefined;
 
 	const zeroPad = (num: number, places: number) => String(num).padStart(places, '0');
 	const getTimerText = (millis: number) => {
@@ -59,57 +62,50 @@
 		seconds: number;
 		color?: string;
 		sound: boolean;
+		currentTime: number;
 	} = () => {
 		const currentTime = performance.now() + timeOffset;
-		const elapsedTime = currentTime - timerData.start_at;
+		const segments = timerData.segments;
+		let { timeInCurrentRound, state } = calculateTimeInCurrentRound(timerData, currentTime);
 
-		if (elapsedTime < 0) {
+		if (state == 'waiting') {
 			return {
 				timerText: getTimerText(0),
 				label: '',
 				seconds: 0,
-				sound: false
+				sound: false,
+				currentTime: currentTime
 			};
 		}
 
-		const segments = timerData.segments.map((segment) => ({
-			...segment,
-			time: segment.time + 1000
-		}));
-		const totalTimePerRound = segments.reduce((acc, curr) => acc + curr.time, 0);
-
-		if (!timerData.repeat && elapsedTime > totalTimePerRound) {
+		if (state == 'finished') {
 			return {
 				timerText: getTimerText(0),
 				label: segments[segments.length - 1].label,
 				seconds: 0,
-				sound: false
+				sound: false,
+				currentTime: currentTime
 			};
 		}
 
-		let timeInCurrentRound = elapsedTime % totalTimePerRound;
-
-		let currentSegmentIndex = 0;
-		let timeInCurrentSegment = 0;
-		while (timeInCurrentRound > 0) {
-			timeInCurrentSegment = Math.floor(segments[currentSegmentIndex].time - timeInCurrentRound);
-			timeInCurrentRound -= segments[currentSegmentIndex].time;
-			currentSegmentIndex++;
-		}
-
-		const currentSegment = segments[currentSegmentIndex - 1];
+		const { timeInCurrentSegment, currentSegment } = calculateTimeInCurrentSegment(
+			timeInCurrentRound,
+			timerData.segments
+		);
 
 		return {
 			timerText: getTimerText(timeInCurrentSegment),
 			label: currentSegment.label,
 			seconds: Math.floor(timeInCurrentSegment / 1000),
 			color: currentSegment.color,
-			sound: currentSegment.sound
+			sound: currentSegment.sound,
+			currentTime: currentTime
 		};
 	};
 
 	const update = () => {
-		const { timerText, label, color, seconds } = calculateCurrentSegment();
+		currentSegment = calculateCurrentSegment();
+		const { timerText, label, color, seconds } = currentSegment;
 
 		if (timerSpan.innerText !== timerText) {
 			timerSpan.innerText = timerText;
@@ -155,6 +151,11 @@
 		bind:this={timerSpan}
 		class={currentSegment.timerText.length > 5 ? 'text-[23.5vw]' : 'text-[35vw]'}
 	/>
+	{#if timerData.display_options.clock && (!displayOptionsOverride || displayOptionsOverride.clock)}
+		<span class="absolute bottom-[10%] left-[50%] translate-x-[-50%] translate-y-[50%] text-[5vw]">
+			{new Date(currentSegment.currentTime).toLocaleTimeString()}
+		</span>
+	{/if}
 </div>
 
 <style>

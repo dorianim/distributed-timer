@@ -38,6 +38,7 @@
 	"dependencies": {
 		"@felte/reporter-svelte": "^1.1.5",
 		"@felte/validator-yup": "^1.0.11",
+		"@floating-ui/dom": "^1.2.5",
 		"@fontsource/roboto": "^4.5.8",
 		"@fortawesome/free-brands-svg-icons": "^6.3.0",
 		"@fortawesome/free-solid-svg-icons": "^6.3.0",

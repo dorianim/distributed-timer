@@ -8,6 +8,7 @@
 	import { API_WS_URL } from '../../../stores';
 	import NoSleep from 'nosleep.js';
 	import { goto } from '$app/navigation';
+	import type { Segment } from '../../../types/segment';
 
 	export let data: PageData;
 
@@ -81,7 +82,14 @@
 
 			switch (data.type) {
 				case 'Timer':
-					timerData = data.data;
+					const timer: TimerType = data.data;
+					timerData = {
+						...timer,
+						segments: timer.segments.map((segment) => ({
+							...segment,
+							time: segment.time + 1000
+						}))
+					};
 					break;
 				case 'Timestamp':
 					const now = performance.now();
@@ -157,7 +165,12 @@
 </script>
 
 {#if timerData && timeOffset}
-	<Timer {timerData} {soundEnabled} {timeOffset} />
+	<Timer
+		{timerData}
+		{soundEnabled}
+		{timeOffset}
+		displayOptionsOverride={{ clock: data.url.searchParams.get('clock') != 'false' }}
+	/>
 {:else}
 	<div
 		class="absolute top-0 h-[100vh] left-[50%] translate-x-[-50%] flex items-center justify-center"

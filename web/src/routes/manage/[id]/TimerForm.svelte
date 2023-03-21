@@ -1,8 +1,20 @@
 <script lang="ts">
-	import { SlideToggle } from '@skeletonlabs/skeleton';
+	import { popup, SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
-	import { faTrash, faAdd, faRemove } from '@fortawesome/free-solid-svg-icons';
+	import {
+		faTrash,
+		faAdd,
+		faRemove,
+		faQuestionCircle,
+		faRefresh,
+		faSave,
+		faPause,
+		faPlay,
+		faPauseCircle
+	} from '@fortawesome/free-solid-svg-icons';
 	import type { Timer } from '../../../types/timer';
+	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from '../../../utils/timer';
+	import type { Segment } from '../../../types/segment';
 
 	interface SegmentFormData {
 		label: string;
@@ -12,12 +24,14 @@
 	}
 
 	interface TimerFormData {
-		when_to_start: 'now' | 'unchanged' | 'custom';
 		start_at_date: string;
 		start_at_time: string;
 		repeat: boolean;
 		segments: SegmentFormData[];
+		display_options_clock: boolean;
 	}
+
+	type TimerAction = 'save' | 'restart' | 'stop' | 'resume';
 
 	export let timerData: Timer;
 	export let onSubmit: (timerData: Timer) => void;
@@ -26,8 +40,13 @@
 
 	const handleSubmit = (e: Event) => {
 		e.preventDefault();
-		console.log('submit');
-		onSubmit(formDataToTimerData(formData));
+	};
+
+	const handleButtonSubmit = (action: TimerAction) => {
+		console.log('button submit', action);
+		return () => {
+			onSubmit(formDataToTimerData(formData, action));
+		};
 	};
 
 	const timerDataToFormData = (timerData: Timer): TimerFormData => {
@@ -40,7 +59,6 @@
 				second: '2-digit'
 			}),
 			repeat: timerData.repeat,
-			when_to_start: 'unchanged',
 			segments: timerData.segments.map((segment) => {
 				return {
 					label: segment.label,
@@ -52,30 +70,107 @@
 					sound: segment.sound,
 					color: segment.color
 				};
-			})
+			}),
+			display_options_clock: timerData.display_options.clock
 		};
 	};
 
-	const formDataToTimerData = (formData: TimerFormData): Timer => {
-		const start_at =
-			formData.when_to_start === 'now'
-				? new Date().getTime()
-				: new Date(`${formData.start_at_date} ${formData.start_at_time}`).getTime();
+	/**
+	 * This function calculates the new start_at
+	 * It behaves differently depending on the action:
+	 * - save: if the segments haven't changed, the start_at time is not changed
+	 *         if the segments have changed, the start_at time is adjusted to make sure the timer is in the same state as before
+	 * - restart: the start_at time is set to the current time
+	 * - stop: the start_at time is not changed
+	 * - resume: the start_at time is adjusted to make sure the timer is in the same state as before
+	 */
+	const calculateStartAt = (
+		formData: TimerFormData,
+		formSegments: Segment[],
+		action: TimerAction
+	): number => {
+		if (action === 'restart') {
+			return new Date().getTime();
+		}
+
+		const formDataStartedAt = new Date(
+			`${formData.start_at_date} ${formData.start_at_time}`
+		).getTime();
+		if (action === 'save' && formDataStartedAt > new Date().getTime()) {
+			return formDataStartedAt;
+		}
+
+		const timeInAnySegmentChanged =
+			formSegments.length == timerData.segments.length &&
+			formSegments.some((segment, index) => {
+				return segment.time !== timerData.segments[index].time;
+			});
+
+		if (action === 'save' && !timeInAnySegmentChanged) {
+			return timerData.start_at;
+		}
+
+		let currentTime = new Date().getTime();
+		if (action === 'resume') {
+			currentTime = timerData.stop_at!;
+		}
+
+		const { timeInCurrentRound } = calculateTimeInCurrentRound(timerData, currentTime);
+		const { timeInCurrentSegment, currentSegment } = calculateTimeInCurrentSegment(
+			timeInCurrentRound,
+			timerData.segments
+		);
+		const currentSegmentIndex = timerData.segments.indexOf(currentSegment);
+
+		// find new segment with the same label
+		let newSegment = formSegments.find((segment) => segment.label === currentSegment.label);
+		if (!newSegment && formSegments.length > currentSegmentIndex) {
+			newSegment = formSegments[currentSegmentIndex];
+		} else if (!newSegment) {
+			return new Date().getTime();
+		}
+
+		// calculate time before new segment
+		const newSegmentIndex = formSegments.indexOf(newSegment);
+		let timeBeforeNewSegment = 0;
+		for (let i = 0; i < newSegmentIndex; i++) {
+			timeBeforeNewSegment += formSegments[i].time;
+		}
+
+		// calculate time in new segment
+		const timeInNewSegment =
+			timeInCurrentSegment > newSegment.time ? 0 : newSegment.time - timeInCurrentSegment;
+
+		// calculate new start_at
+		return new Date().getTime() - timeBeforeNewSegment - timeInNewSegment;
+	};
+
+	const formSegmentsToTimerSegments = (formData: TimerFormData): Segment[] => {
+		return formData.segments.map((segment) => {
+			const time = segment.time.split(':');
+			return {
+				label: segment.label,
+				time: parseInt(time[0]) * 60 * 1000 + parseInt(time[1]) * 1000,
+				sound: segment.sound,
+				color: segment.color
+			};
+		});
+	};
+
+	const formDataToTimerData = (formData: TimerFormData, action: TimerAction): Timer => {
+		const segments = formSegmentsToTimerSegments(formData);
+		const start_at = calculateStartAt(formData, segments, action);
+		const stop_at = action === 'stop' ? new Date().getTime() : undefined;
 
 		return {
 			id: timerData.id,
 			start_at: start_at,
+			stop_at: stop_at,
 			repeat: formData.repeat,
-			segments: formData.segments.map((segment) => {
-				return {
-					label: segment.label,
-					time:
-						parseInt(segment.time.split(':')[0]) * 60 * 1000 +
-						parseInt(segment.time.split(':')[1]) * 1000,
-					sound: segment.sound,
-					color: segment.color
-				};
-			})
+			segments: segments,
+			display_options: {
+				clock: formData.display_options_clock
+			}
 		};
 	};
 
@@ -100,6 +195,15 @@
 </script>
 
 <form class="w-full grid gap-3" on:submit={handleSubmit}>
+	{#if timerData.stop_at}
+		<aside class="alert variant-ghost-warning">
+			<Fa icon={faPauseCircle} class="text-2xl" />
+			<h3 class="alert-message">
+				The timer is currently paused (since {new Date(timerData.stop_at).toLocaleString()})
+			</h3>
+		</aside>
+	{/if}
+
 	<strong>Timer sequence:</strong>
 
 	{#each formData.segments as segment, i}
@@ -168,48 +272,108 @@
 		</div>
 	{/each}
 
-	<SlideToggle active="bg-primary-500" name="repeat" size="sm" bind:checked={formData.repeat}
-		>repeat</SlideToggle
+	<SlideToggle active="bg-primary-500" name="repeat" size="sm" bind:checked={formData.repeat}>
+		repeat
+	</SlideToggle>
+
+	<strong>Display options:</strong>
+	<SlideToggle
+		active="bg-primary-500"
+		name="repeat"
+		size="sm"
+		bind:checked={formData.display_options_clock}
 	>
-	<strong>When to start the timer:</strong>
-	<fieldset>
-		<label class="flex items-center space-x-2">
-			<div class="space-y-2">
-				<label class="flex items-center space-x-2">
-					<input class="radio" type="radio" value="unchanged" bind:group={formData.when_to_start} />
-					<p>Leave it unchanged</p>
-				</label>
-				<label class="flex items-center space-x-2">
-					<input class="radio" type="radio" value="now" bind:group={formData.when_to_start} />
-					<p>When clicking submit</p>
-				</label>
-				<label class="flex items-center space-x-2">
-					<input class="radio" type="radio" value="custom" bind:group={formData.when_to_start} />
-					<p>At a specific time</p>
-				</label>
+		<div class="grid grid-cols-2 gap-2 items-center">
+			show clock
+			<div
+				class="w-fit"
+				use:popup={{
+					event: 'hover',
+					target: 'showClockExplination',
+					placement: 'top'
+				}}
+			>
+				<Fa icon={faQuestionCircle} />
 			</div>
-		</label>
-	</fieldset>
 
-	{#if formData.when_to_start === 'custom'}
-		<div class="grid grid-cols-2 gap-3">
-			<input
-				class="input variant-form-material"
-				type="date"
-				placeholder="timer starttime"
-				bind:value={formData.start_at_date}
-				required
-			/>
-			<input
-				class="input variant-form-material"
-				type="time"
-				placeholder="timer starttime"
-				step="1"
-				bind:value={formData.start_at_time}
-				required
-			/>
+			<div class="card variant-filled-primary p-4" data-popup="showClockExplination">
+				Shows a clock at the bottom of the timer.<br />Can be overridden on one timer by adding
+				?clock=false to the URL.
+				<div class="arrow variant-filled-primary" />
+			</div>
 		</div>
-	{/if}
+	</SlideToggle>
 
-	<button class="btn variant-filled-primary">Submit</button>
+	<strong>When to start the timer:</strong>
+
+	<div class="grid grid-cols-2 gap-3">
+		<input
+			class="input variant-form-material col-span-2 md:col-span-1"
+			type="date"
+			placeholder="timer starttime"
+			bind:value={formData.start_at_date}
+			required
+		/>
+		<input
+			class="input variant-form-material col-span-2 md:col-span-1"
+			type="time"
+			placeholder="timer starttime"
+			step="1"
+			bind:value={formData.start_at_time}
+			required
+		/>
+		<div class="col-span-2 flex items-center gap-2">
+			<p>
+				This field will only be used if the <b class="text-secondary-500">SAVE</b> button is pressed,
+				and the selected time is in the future.
+			</p>
+			<div
+				class="w-fit"
+				use:popup={{
+					event: 'hover',
+					target: 'startTimeExplination',
+					placement: 'top'
+				}}
+			>
+				<Fa icon={faQuestionCircle} />
+			</div>
+
+			<div class="card variant-filled-primary p-4" data-popup="startTimeExplination">
+				... otherwise, the field will be adjusted to preserve the current state of the timer or
+				restart it.
+				<div class="arrow variant-filled-primary" />
+			</div>
+		</div>
+	</div>
+
+	<strong>Actions:</strong>
+
+	<button class="btn variant-filled-secondary" on:click={handleButtonSubmit('save')}>
+		<span><Fa icon={faSave} /></span><span>Save</span>
+	</button>
+
+	<div class="grid grid-cols-2 gap-3">
+		<button
+			class="btn variant-filled-primary col-span-2 md:col-span-1"
+			on:click={handleButtonSubmit('restart')}
+		>
+			<span><Fa icon={faRefresh} /></span><span>Save and restart</span>
+		</button>
+
+		{#if timerData.stop_at}
+			<button
+				class="btn variant-filled-tertiary col-span-2 md:col-span-1"
+				on:click={handleButtonSubmit('resume')}
+			>
+				<span><Fa icon={faPlay} /></span><span>Save and resume</span>
+			</button>
+		{:else}
+			<button
+				class="btn variant-filled-primary col-span-2 md:col-span-1"
+				on:click={handleButtonSubmit('stop')}
+			>
+				<span><Fa icon={faPause} /></span><span>Save and pause</span>
+			</button>
+		{/if}
+	</div>
 </form>
