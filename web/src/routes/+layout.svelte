@@ -3,6 +3,9 @@
 	// Your selected Skeleton theme:
 	import '../theme.postcss';
 
+	import '@fontsource/roboto/400.css';
+	import '@fontsource/roboto/500.css';
+
 	// This contains the bulk of Skeletons required styles:
 	import '@skeletonlabs/skeleton/styles/all.css';
 	import { Modal } from '@skeletonlabs/skeleton';
@@ -16,3 +19,9 @@
 </div>
 
 <Modal />
+
+<style>
+	:global(body) {
+		font-family: 'Roboto', sans-serif !important;
+	}
+</style>
