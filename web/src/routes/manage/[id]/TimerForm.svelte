@@ -1,33 +1,37 @@
 <script lang="ts">
-	import { popup, SlideToggle } from '@skeletonlabs/skeleton';
+	import {
+		modalStore,
+		popup,
+		SlideToggle,
+		type ModalComponent,
+		type ModalSettings
+	} from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
 	import {
 		faTrash,
 		faAdd,
 		faRemove,
+		faGear,
 		faQuestionCircle,
 		faRefresh,
 		faSave,
 		faPause,
 		faPlay,
-		faPauseCircle
+		faPauseCircle,
+		faVolumeUp,
+		faVolumeMute
 	} from '@fortawesome/free-solid-svg-icons';
 	import type { Timer } from '../../../types/timer';
 	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from '../../../utils/timer';
 	import type { Segment } from '../../../types/segment';
-
-	interface SegmentFormData {
-		label: string;
-		time: string; // minutes:seconds
-		sound: boolean;
-		color?: string;
-	}
+	import SegmentDetailsForm from './SegmentDetailsForm.svelte';
+	import TimeInputField from './TimeInputField.svelte';
 
 	interface TimerFormData {
 		start_at_date: string;
 		start_at_time: string;
 		repeat: boolean;
-		segments: SegmentFormData[];
+		segments: Segment[];
 		display_options_clock: boolean;
 	}
 
@@ -59,18 +63,7 @@
 				second: '2-digit'
 			}),
 			repeat: timerData.repeat,
-			segments: timerData.segments.map((segment) => {
-				return {
-					label: segment.label,
-					time: `${Math.floor(segment.time / (1000 * 60))
-						.toString()
-						.padStart(2, '0')}:${(Math.floor(segment.time / 1000) % 60)
-						.toString()
-						.padStart(2, '0')}`,
-					sound: segment.sound,
-					color: segment.color
-				};
-			}),
+			segments: timerData.segments,
 			display_options_clock: timerData.display_options.clock
 		};
 	};
@@ -145,21 +138,8 @@
 		return new Date().getTime() - timeBeforeNewSegment - timeInNewSegment;
 	};
 
-	const formSegmentsToTimerSegments = (formData: TimerFormData): Segment[] => {
-		return formData.segments.map((segment) => {
-			const time = segment.time.split(':');
-			return {
-				label: segment.label,
-				time: parseInt(time[0]) * 60 * 1000 + parseInt(time[1]) * 1000,
-				sound: segment.sound,
-				color: segment.color
-			};
-		});
-	};
-
 	const formDataToTimerData = (formData: TimerFormData, action: TimerAction): Timer => {
-		const segments = formSegmentsToTimerSegments(formData);
-		const start_at = calculateStartAt(formData, segments, action);
+		const start_at = calculateStartAt(formData, formData.segments, action);
 		const stop_at = action === 'stop' ? new Date().getTime() : undefined;
 
 		return {
@@ -167,27 +147,30 @@
 			start_at: start_at,
 			stop_at: stop_at,
 			repeat: formData.repeat,
-			segments: segments,
+			segments: formData.segments,
 			display_options: {
 				clock: formData.display_options_clock
 			}
 		};
 	};
 
-	const handleTimeFieldChange = (i: number) => {
-		let time: string = formData.segments[i].time.replace(/[^0-9]/g, '');
+	const openSegmentDetailsModal = (i: number) => {
+		const modalComponent: ModalComponent = {
+			ref: SegmentDetailsForm,
+			props: { segment: { ...formData.segments[i] } }
+		};
 
-		while (time.length < 4) {
-			time = '0' + time;
-		}
+		const oldSegment = { ...formData.segments[i] };
 
-		time = time.substring(0, time.length - 2) + ':' + time.substring(time.length - 2);
+		const d: ModalSettings = {
+			type: 'component',
+			component: modalComponent,
+			response: (segment: Segment | false) => {
+				formData.segments[i] = segment ? segment : oldSegment;
+			}
+		};
 
-		while (time[0] === '0' && time.length > 5) {
-			time = time.substring(1);
-		}
-
-		formData.segments[i].time = time;
+		modalStore.trigger(d);
 	};
 
 	formData = timerDataToFormData(timerData);
@@ -207,7 +190,7 @@
 	<strong>Timer sequence:</strong>
 
 	{#each formData.segments as segment, i}
-		<div class="card p-4 w-full grid gap-3 sm:grid-cols-2 lg:grid-cols-5 items-center">
+		<div class="card p-4 w-full grid gap-3 sm:grid-cols-2 lg:grid-cols-3 items-center">
 			<input
 				class="input variant-form-material"
 				type="text"
@@ -215,37 +198,15 @@
 				bind:value={segment.label}
 				required
 			/>
-			<input
-				class="input variant-form-material"
-				type="text"
-				placeholder="time in milliseconds"
-				pattern="^[0-9]+:[0-9][0-9]$"
-				bind:value={segment.time}
-				on:input={() => handleTimeFieldChange(i)}
-				required
-			/>
-
-			<SlideToggle active="bg-primary-500" name="sound" size="sm" bind:checked={segment.sound}
-				>enable sound</SlideToggle
-			>
-
-			<label class="label">
-				<div class="flex items-center">
-					<input class="input" type="color" bind:value={segment.color} />
-					<span class="pl-3">background-color</span>
-					{#if segment.color}
-						<button
-							type="button"
-							class="btn-icon p-0"
-							on:click={() => {
-								segment.color = undefined;
-							}}><Fa icon={faRemove} /></button
-						>
-					{/if}
-				</div>
-			</label>
+			<TimeInputField bind:time={segment.time} />
 
 			<div class="flex items-center justify-around sm:col-span-2 lg:col-span-1">
+				<button
+					type="button"
+					class="btn-icon variant-filled-secondary"
+					disabled={formData.segments.length === 1}
+					on:click={() => openSegmentDetailsModal(i)}><Fa icon={faGear} /></button
+				>
 				<button
 					type="button"
 					class="btn-icon variant-filled-error"
@@ -255,6 +216,7 @@
 						formData.segments = formData.segments.filter((_, index) => index !== i);
 					}}><Fa icon={faTrash} /></button
 				>
+
 				<button
 					type="button"
 					class="btn-icon variant-filled-success"
@@ -262,8 +224,9 @@
 						console.log('add segment');
 						formData.segments.splice(i + 1, 0, {
 							label: `Segment ${formData.segments.length + 1}`,
-							time: '0:30',
-							sound: false
+							time: 30 * 1000,
+							sound: false,
+							count_to: 0
 						});
 						formData.segments = [...formData.segments];
 					}}><Fa icon={faAdd} /></button

@@ -1,6 +1,24 @@
 import type { Segment } from '../types/segment';
 import type { Timer } from '../types/timer';
 
+const zeroPad = (num: number, places: number) => String(num).padStart(places, '0');
+const getTimerText = (millis: number) => {
+	let seconds = Math.floor(millis / 1000);
+	if (seconds < 0) {
+		seconds = 0;
+	}
+
+	let remaningHours = zeroPad(Math.floor(seconds / 60 / 60) % (60 * 60), 2);
+	let remaningMinutes = zeroPad(Math.floor(seconds / 60) % 60, 2);
+	let remaningSeconds = zeroPad(seconds % 60, 2);
+
+	if (parseInt(remaningHours) === 0) {
+		return remaningMinutes + ':' + remaningSeconds;
+	}
+
+	return remaningHours + ':' + remaningMinutes + ':' + remaningSeconds;
+};
+
 function calculateTimeInCurrentRound(
 	timerData: Timer,
 	currentTime: number
@@ -60,4 +78,4 @@ function calculateTimeInCurrentSegment(
 	};
 }
 
-export { calculateTimeInCurrentRound, calculateTimeInCurrentSegment };
+export { calculateTimeInCurrentRound, calculateTimeInCurrentSegment, getTimerText };

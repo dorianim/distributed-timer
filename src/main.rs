@@ -12,12 +12,19 @@ mod color;
 mod routes;
 
 use tokio::sync::broadcast;
+
+fn default_zero() -> u32 {
+    0
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Segment {
     label: String,
     time: u32,
     sound: bool,
     color: Option<Color>,
+    #[serde(default = "default_zero")]
+    count_to: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]

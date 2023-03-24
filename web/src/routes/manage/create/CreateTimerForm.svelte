@@ -13,12 +13,14 @@
 			segments: [
 				{
 					label: 'Switch',
-					time: 15 * 1000,
+					time: 14 * 1000,
+					count_to: 1,
 					sound: true
 				},
 				{
 					label: 'Boulder',
-					time: 4 * 60 * 1000,
+					time: (4 * 60 + 1) * 1000,
+					count_to: 0,
 					sound: true
 				}
 			]
@@ -28,7 +30,8 @@
 			segments: [
 				{
 					label: 'Boulder',
-					time: 4 * 60 * 1000,
+					time: (4 * 60 + 1) * 1000,
+					count_to: 0,
 					sound: true
 				}
 			]
@@ -39,6 +42,7 @@
 				{
 					label: 'Work',
 					time: 4 * 60 * 1000,
+					count_to: 1,
 					sound: true
 				}
 			]

@@ -2,30 +2,16 @@
 	import type { Timer } from '../../../types/timer';
 	import { onMount } from 'svelte';
 	import type { DisplayOptions } from '../../../types/displayOptions';
-	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from '../../../utils/timer';
+	import {
+		calculateTimeInCurrentRound,
+		calculateTimeInCurrentSegment,
+		getTimerText
+	} from '../../../utils/timer';
 
 	export let timerData: Timer;
 	export let soundEnabled: boolean;
 	export let timeOffset: number;
 	export let displayOptionsOverride: DisplayOptions | undefined;
-
-	const zeroPad = (num: number, places: number) => String(num).padStart(places, '0');
-	const getTimerText = (millis: number) => {
-		let seconds = Math.floor(millis / 1000);
-		if (seconds < 0) {
-			seconds = 0;
-		}
-
-		let remaningHours = zeroPad(Math.floor(seconds / 60 / 60) % (60 * 60), 2);
-		let remaningMinutes = zeroPad(Math.floor(seconds / 60) % 60, 2);
-		let remaningSeconds = zeroPad(seconds % 60, 2);
-
-		if (parseInt(remaningHours) === 0) {
-			return remaningMinutes + ':' + remaningSeconds;
-		}
-
-		return remaningHours + ':' + remaningMinutes + ':' + remaningSeconds;
-	};
 
 	const preloadSounds = (sounds: string[]) => {
 		let audios: { [sound: string]: HTMLAudioElement } = {};
@@ -93,10 +79,12 @@
 			timerData.segments
 		);
 
+		const effectiveTimeInCurrentSegment = timeInCurrentSegment + currentSegment.count_to;
+
 		return {
-			timerText: getTimerText(timeInCurrentSegment),
+			timerText: getTimerText(effectiveTimeInCurrentSegment),
 			label: currentSegment.label,
-			seconds: Math.floor(timeInCurrentSegment / 1000),
+			seconds: Math.floor(effectiveTimeInCurrentSegment / 1000),
 			color: currentSegment.color,
 			sound: currentSegment.sound,
 			currentTime: currentTime

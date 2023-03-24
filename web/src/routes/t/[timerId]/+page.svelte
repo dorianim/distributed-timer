@@ -83,13 +83,7 @@
 			switch (data.type) {
 				case 'Timer':
 					const timer: TimerType = data.data;
-					timerData = {
-						...timer,
-						segments: timer.segments.map((segment) => ({
-							...segment,
-							time: segment.time + 1000
-						}))
-					};
+					timerData = timer;
 					break;
 				case 'Timestamp':
 					const now = performance.now();
