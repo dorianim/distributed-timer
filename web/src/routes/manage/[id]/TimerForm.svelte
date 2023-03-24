@@ -26,13 +26,17 @@
 	import type { Segment } from '../../../types/segment';
 	import SegmentDetailsForm from './SegmentDetailsForm.svelte';
 	import TimeInputField from './TimeInputField.svelte';
+	import HelpPopup from '../../../components/HelpPopup.svelte';
 
 	interface TimerFormData {
 		start_at_date: string;
 		start_at_time: string;
 		repeat: boolean;
 		segments: Segment[];
-		display_options_clock: boolean;
+		display_options: {
+			clock: boolean;
+			run_before_started: boolean;
+		};
 	}
 
 	type TimerAction = 'save' | 'restart' | 'stop' | 'resume';
@@ -64,7 +68,10 @@
 			}),
 			repeat: timerData.repeat,
 			segments: timerData.segments,
-			display_options_clock: timerData.display_options.clock
+			display_options: {
+				clock: timerData.display_options.clock,
+				run_before_started: timerData.display_options.pre_start_behaviour === 'RunNormally'
+			}
 		};
 	};
 
@@ -89,7 +96,7 @@
 		const formDataStartedAt = new Date(
 			`${formData.start_at_date} ${formData.start_at_time}`
 		).getTime();
-		if (action === 'save' && formDataStartedAt > new Date().getTime()) {
+		if (formDataStartedAt > new Date().getTime()) {
 			return formDataStartedAt;
 		}
 
@@ -149,7 +156,10 @@
 			repeat: formData.repeat,
 			segments: formData.segments,
 			display_options: {
-				clock: formData.display_options_clock
+				clock: formData.display_options.clock,
+				pre_start_behaviour: formData.display_options.run_before_started
+					? 'RunNormally'
+					: 'ShowZero'
 			}
 		};
 	};
@@ -244,26 +254,29 @@
 		active="bg-primary-500"
 		name="repeat"
 		size="sm"
-		bind:checked={formData.display_options_clock}
+		bind:checked={formData.display_options.clock}
 	>
 		<div class="grid grid-cols-2 gap-2 items-center">
 			show clock
-			<div
-				class="w-fit"
-				use:popup={{
-					event: 'hover',
-					target: 'showClockExplination',
-					placement: 'top'
-				}}
-			>
-				<Fa icon={faQuestionCircle} />
-			</div>
-
-			<div class="card variant-filled-primary p-4" data-popup="showClockExplination">
+			<HelpPopup>
 				Shows a clock at the bottom of the timer.<br />Can be overridden on one timer by adding
 				?clock=false to the URL.
-				<div class="arrow variant-filled-primary" />
-			</div>
+			</HelpPopup>
+		</div>
+	</SlideToggle>
+
+	<SlideToggle
+		active="bg-primary-500"
+		name="repeat"
+		size="sm"
+		bind:checked={formData.display_options.run_before_started}
+	>
+		<div class="grid grid-cols-2 gap-2 items-center">
+			run before start time
+			<HelpPopup>
+				Makes the timer run normall before the start time.<br />Can be useful if ca competition
+				should start at 9:00 but you want some test runs before.
+			</HelpPopup>
 		</div>
 	</SlideToggle>
 
@@ -286,26 +299,11 @@
 			required
 		/>
 		<div class="col-span-2 flex items-center gap-2">
-			<p>
-				This field will only be used if the <b class="text-secondary-500">SAVE</b> button is pressed,
-				and the selected time is in the future.
-			</p>
-			<div
-				class="w-fit"
-				use:popup={{
-					event: 'hover',
-					target: 'startTimeExplination',
-					placement: 'top'
-				}}
-			>
-				<Fa icon={faQuestionCircle} />
-			</div>
-
-			<div class="card variant-filled-primary p-4" data-popup="startTimeExplination">
+			<p>This field will only be used if the selected time is in the future.</p>
+			<HelpPopup>
 				... otherwise, the field will be adjusted to preserve the current state of the timer or
 				restart it.
-				<div class="arrow variant-filled-primary" />
-			</div>
+			</HelpPopup>
 		</div>
 	</div>
 

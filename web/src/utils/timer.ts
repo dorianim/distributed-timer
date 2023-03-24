@@ -19,6 +19,10 @@ const getTimerText = (millis: number) => {
 	return remaningHours + ':' + remaningMinutes + ':' + remaningSeconds;
 };
 
+function mod(num: number, mod: number) {
+	return ((num % mod) + mod) % mod;
+}
+
 function calculateTimeInCurrentRound(
 	timerData: Timer,
 	currentTime: number
@@ -32,7 +36,7 @@ function calculateTimeInCurrentRound(
 
 	const elapsedTime = currentTime - timerData.start_at;
 
-	if (elapsedTime < 0) {
+	if (elapsedTime < 0 && timerData.display_options.pre_start_behaviour === 'ShowZero') {
 		return {
 			timeInCurrentRound: 0,
 			state: 'waiting'
@@ -48,7 +52,8 @@ function calculateTimeInCurrentRound(
 		};
 	}
 
-	let timeInCurrentRound = elapsedTime % totalTimePerRound;
+	let timeInCurrentRound = Math.floor(mod(elapsedTime, totalTimePerRound));
+
 	return {
 		timeInCurrentRound,
 		state: stopped ? 'stopped' : 'running'

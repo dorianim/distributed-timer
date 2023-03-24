@@ -27,9 +27,24 @@ pub struct Segment {
     count_to: u32,
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug)]
+enum PreStartBehaviour {
+    ShowZero,
+    RunNormally,
+}
+
+impl Default for PreStartBehaviour {
+    fn default() -> Self {
+        PreStartBehaviour::ShowZero
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct DisplayOptions {
+    #[serde(default)]
     clock: bool,
+    #[serde(default)]
+    pre_start_behaviour: PreStartBehaviour,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
