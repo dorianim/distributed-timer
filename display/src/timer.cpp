@@ -8,7 +8,9 @@ ActiveSegment calculateCurrentSegment(TimerData timerData, TIME timeOffset) {
   }
 
   TIME currentTime = (TIME)millis() + timeOffset;
-  if (currentTime < timerData.start_at) {
+  if (currentTime < timerData.start_at &&
+      timerData.display_options.pre_start_behaviour ==
+          PreStartBehaviour::SHOW_ZERO) {
     return {0, 0xfff};
   }
 
@@ -38,6 +40,8 @@ ActiveSegment calculateCurrentSegment(TimerData timerData, TIME timeOffset) {
     timeInCurrentRound -= timerData.segments[currentSegmentIndex].time;
     currentSegmentIndex++;
   }
+
+  timeInCurrentSegment += timerData.segments[currentSegmentIndex - 1].count_to;
 
   return {timeInCurrentSegment / 1000,
           timerData.segments[currentSegmentIndex - 1].color};

@@ -50,7 +50,6 @@ void _handleNewOffset(TIME offset) {
   }
 
   _timeOffset = sum / validOffsets;
-  Serial.printf("New offset: %llu\n", _timeOffset);
 }
 
 uint32_t _parseHexColor(const char *c) {
@@ -69,38 +68,57 @@ uint32_t _parseHexColor(const char *c) {
   return color;
 }
 
+void _loadDisplayOptions(JsonObject &data) {
+  String pre_start_behaviour = data["pre_start_behaviour"];
+  if (pre_start_behaviour == "ShowZero") {
+    _timerData.display_options.pre_start_behaviour =
+        timer::PreStartBehaviour::SHOW_ZERO;
+  } else if (pre_start_behaviour == "RunNormally") {
+    _timerData.display_options.pre_start_behaviour =
+        timer::PreStartBehaviour::RUN_NORMALLY;
+  }
+}
+
+void _loadTimerData(JsonObject &data) {
+  _resetTimerData();
+
+  if (data["segments"].size() > 10) {
+    return;
+  }
+  _timerData.valid = true;
+  _timerData.repeat = data["repeat"];
+  _timerData.start_at = data["start_at"].as<TIME>();
+
+  if (data["stop_at"].isNull()) {
+    _timerData.stop_at = 0;
+  } else {
+    _timerData.stop_at = data["stop_at"].as<TIME>();
+  }
+
+  JsonObject display_options = data["display_options"];
+  _loadDisplayOptions(display_options);
+
+  JsonArray segments = data["segments"];
+  for (size_t i = 0; i < segments.size() && i < 10; i++) {
+    JsonObject segment = segments[i];
+    _timerData.segments[i].valid = true;
+    _timerData.segments[i].time = segment["time"].as<TIME>();
+    _timerData.segments[i].count_to = segment["count_to"].as<TIME>();
+    _timerData.segments[i].sound = segment["sound"];
+
+    if (segment["color"].isNull()) {
+      _timerData.segments[i].color = 0xffffff;
+    } else {
+      _timerData.segments[i].color = _parseHexColor(segment["color"]);
+    }
+  }
+}
+
 void _handleMessage(JsonDocument &doc) {
   String type = doc["type"];
   if (type == "Timer") {
-    _resetTimerData();
-
     JsonObject data = doc["data"];
-    if (data["segments"].size() > 10) {
-      return;
-    }
-    _timerData.valid = true;
-    _timerData.repeat = data["repeat"];
-    _timerData.start_at = data["start_at"].as<TIME>();
-
-    if (data["stop_at"].isNull()) {
-      _timerData.stop_at = 0;
-    } else {
-      _timerData.stop_at = data["stop_at"].as<TIME>();
-    }
-
-    JsonArray segments = data["segments"];
-    for (size_t i = 0; i < segments.size() && i < 10; i++) {
-      JsonObject segment = segments[i];
-      _timerData.segments[i].valid = true;
-      _timerData.segments[i].time = segment["time"].as<TIME>() + 1000;
-      _timerData.segments[i].sound = segment["sound"];
-
-      if (segment["color"].isNull()) {
-        _timerData.segments[i].color = 0xffffff;
-      } else {
-        _timerData.segments[i].color = _parseHexColor(segment["color"]);
-      }
-    }
+    _loadTimerData(data);
   } else if (type == "Timestamp") {
     unsigned long now = millis();
     unsigned long getTimeRoundtrip = now - _lastGetTimeSent;
@@ -132,8 +150,6 @@ void _webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
     break;
   }
   case WStype_TEXT: {
-    Serial.printf("[WSc] get text: %s\n", payload);
-
     _doc.clear();
     DeserializationError error = deserializeJson(_doc, payload);
     if (error) {

@@ -8,8 +8,15 @@ namespace timer {
 struct TimerSegment {
   bool valid;
   unsigned long time;
+  unsigned long count_to;
   bool sound;
   uint32_t color;
+};
+
+enum class PreStartBehaviour { SHOW_ZERO, RUN_NORMALLY };
+
+struct DisplayOptions {
+  PreStartBehaviour pre_start_behaviour;
 };
 
 struct TimerData {
@@ -17,6 +24,7 @@ struct TimerData {
   bool repeat;
   TIME start_at;
   TIME stop_at;
+  DisplayOptions display_options;
   TimerSegment segments[10];
 };
 
