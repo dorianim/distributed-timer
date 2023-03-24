@@ -160,13 +160,13 @@
 			props: { segment: { ...formData.segments[i] } }
 		};
 
-		const oldSegment = { ...formData.segments[i] };
-
 		const d: ModalSettings = {
 			type: 'component',
 			component: modalComponent,
 			response: (segment: Segment | false) => {
-				formData.segments[i] = segment ? segment : oldSegment;
+				if (segment !== false) {
+					formData.segments[i] = segment;
+				}
 			}
 		};
 

@@ -30,13 +30,10 @@
 			tmpTime = tmpTime.substring(1);
 		}
 
-		timeString = tmpTime;
+		time = timeStringToTime(tmpTime);
 	};
 
-	$: {
-		if (timeString) time = timeStringToTime(timeString);
-		else timeString = timeToTimeString(time);
-	}
+	$: timeString = timeToTimeString(time);
 </script>
 
 {#if label}
