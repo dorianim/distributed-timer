@@ -11,29 +11,16 @@
 		{
 			name: 'Boulder 4min + 15s',
 			segments: [
-				{
-					label: 'Switch',
-					time: 14 * 1000,
-					count_to: 1,
-					sound: true
-				},
-				{
-					label: 'Boulder',
-					time: (4 * 60 + 1) * 1000,
-					count_to: 0,
-					sound: true
-				}
+				{ label: 'Change', time: 14000, sound: true, color: '#E66100', count_to: 1000 },
+				{ label: 'Boulder', time: 231000, sound: true, color: '#26A269', count_to: 10000 },
+				{ label: 'Boulder', time: 10000, sound: true, color: '#A51D2D', count_to: 0 }
 			]
 		},
 		{
 			name: 'Boulder 4min',
 			segments: [
-				{
-					label: 'Boulder',
-					time: (4 * 60 + 1) * 1000,
-					count_to: 0,
-					sound: true
-				}
+				{ label: 'Boulder', time: 231000, sound: true, color: '#26A269', count_to: 10000 },
+				{ label: 'Boulder', time: 10000, sound: true, color: '#A51D2D', count_to: 0 }
 			]
 		},
 		{
