@@ -10,7 +10,7 @@ struct ServerStats {
     server_up_since: u128,
     uptime: String,
     redis_memory: u64,
-    num_keys: u64,
+    num_keys: u32,
     connections: i64,
 }
 
@@ -64,7 +64,7 @@ async fn server_stats(State(state): State<SharedState>) -> Json<ServerStats> {
             num_keys += r.split("=").collect::<Vec<&str>>()[1]
                 .split(",")
                 .collect::<Vec<&str>>()[0]
-                .parse::<u64>()
+                .parse::<u32>()
                 .unwrap();
         }
     }
