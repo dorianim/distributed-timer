@@ -30,7 +30,7 @@ pub struct Segment {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 enum PreStartBehaviour {
     ShowZero,
-    RunNormally,
+    ShowFirstInterval,
 }
 
 impl Default for PreStartBehaviour {
