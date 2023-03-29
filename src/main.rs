@@ -1,5 +1,6 @@
 use axum::{http::Request, response::Response, Router};
 use color::Color;
+use redis::Client;
 use serde::{Deserialize, Serialize};
 use tower_http::catch_panic::CatchPanicLayer;
 
@@ -77,6 +78,8 @@ pub struct AppState {
     jwt_key: String,
     instance_properties: InstanceProperties,
     redis_task_rx: broadcast::Receiver<Timer>,
+    redis_client: Client,
+    server_up_since: u128,
 }
 
 #[tokio::main]
@@ -107,6 +110,11 @@ async fn main() {
         jwt_key,
         instance_properties,
         redis_task_rx,
+        redis_client: client.clone(),
+        server_up_since: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis(),
     });
 
     routes::ws::spawn_global_redis_listener_task(manager, client, redis_task_tx);
@@ -115,6 +123,7 @@ async fn main() {
         .nest("/api/ws", routes::ws::routes())
         .nest("/api/timer", routes::timer::routes(state.clone()))
         .nest("/api/instance", routes::instance::routes())
+        .nest("/api/stats", routes::stats::routes())
         .fallback(routes::web::web_assets)
         .layer(cors)
         .layer(
