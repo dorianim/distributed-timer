@@ -2,9 +2,11 @@
 
 #include <Adafruit_NeoMatrix.h>
 
+#include "display.h"
+
 namespace wifi {
 
-bool init(Adafruit_NeoMatrix *matrix, bool reset);
+bool init(Display *display, bool reset);
 void loop();
 bool connected();
 String timerId();

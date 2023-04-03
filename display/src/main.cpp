@@ -1,10 +1,10 @@
-#include <Adafruit_GFX.h>
-#include <Adafruit_NeoMatrix.h>
-#include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 
+#include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
+
+#include "display.h"
 #include "socket.h"
 #include "timer.h"
 #include "wifi.h"
@@ -13,24 +13,52 @@
 // pin the matrix is attached to
 #define PIN D8
 
-Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(
+/*Display *display = Display::from(Adafruit_NeoMatrix(
     8, 8, 6, 1, PIN,
     NEO_TILE_BOTTOM + NEO_TILE_RIGHT + NEO_TILE_ROWS + NEO_TILE_PROGRESSIVE +
         NEO_MATRIX_BOTTOM + NEO_MATRIX_RIGHT + NEO_MATRIX_ROWS +
         NEO_TILE_PROGRESSIVE,
-    NEO_GRB + NEO_KHZ800);
+    NEO_GRB + NEO_KHZ800));*/
+
+#define R1_PIN 25
+#define G1_PIN 26
+#define B1_PIN 27
+#define R2_PIN 14
+#define G2_PIN 12
+#define B2_PIN 13
+#define A_PIN 23
+#define B_PIN 19
+#define C_PIN 5
+#define D_PIN 17
+#define E_PIN                                                                  \
+  32 // required for 1/32 scan panels, like 64x64px. Any available pin would do,
+     // i.e. IO32
+#define LAT_PIN 4
+#define OE_PIN 15
+#define CLK_PIN 16
+
+HUB75_I2S_CFG::i2s_pins _pins = {R1_PIN, G1_PIN,  B1_PIN, R2_PIN, G2_PIN,
+                                 B2_PIN, A_PIN,   B_PIN,  C_PIN,  D_PIN,
+                                 E_PIN,  LAT_PIN, OE_PIN, CLK_PIN};
+HUB75_I2S_CFG mxconfig(64,   // Module width
+                       64,   // Module height
+                       1,    // chain length
+                       _pins // pin mapping,
+);
+
+Display *display;
 
 void setup() {
   Serial.begin(115200);
 
-  pinMode(D5, INPUT_PULLUP);
+  mxconfig.latch_blanking = 1;
+  mxconfig.i2sspeed = HUB75_I2S_CFG::HZ_20M;
+  mxconfig.driver = HUB75_I2S_CFG::FM6124;
+  mxconfig.double_buff = true;
+  display = Display::from(MatrixPanel_I2S_DMA(mxconfig));
+  display->setup();
 
-  matrix.begin();
-  matrix.setTextWrap(false);
-  matrix.setBrightness(100);
-  matrix.setTextColor(matrix.Color(0, 0, 255));
-
-  if (!wifi::init(&matrix, digitalRead(D5) == LOW)) {
+  if (!wifi::init(display, false)) {
     ESP.restart();
     delay(10000);
   }
@@ -38,36 +66,28 @@ void setup() {
   socket::init(wifi::timerId());
 }
 
-void printPadded(unsigned long number) {
-  if (number < 10) {
-    matrix.print("0");
-  }
-
-  matrix.print(number);
-}
+struct DisplayState {
+  int error;
+  unsigned long long currentSeconds;
+};
+DisplayState lastState = {0, 0};
 
 void refreshDisplay() {
+  timer::ActiveSegment currentSegment =
+      timer::calculateCurrentSegment(socket::timerData(), socket::offset());
+
+  if (socket::error() == lastState.error &&
+      currentSegment.seconds == lastState.currentSeconds)
+    return;
+
   if (socket::error() > 0) {
-    matrix.clear();
-    matrix.setCursor(12, 0);
-    matrix.setTextColor(matrix.Color(255, 0, 0));
-    matrix.print("E");
-    matrix.print(socket::error());
-    matrix.show();
+    display->printError(socket::error());
+    lastState.error = socket::error();
     return;
   }
 
-  timer::ActiveSegment currentSegment =
-      timer::calculateCurrentSegment(socket::timerData(), socket::offset());
-  matrix.clear();
-  matrix.setCursor(9, 0);
-  matrix.setTextColor(matrix.Color(currentSegment.color >> 16,
-                                   currentSegment.color >> 8,
-                                   currentSegment.color));
-  printPadded(currentSegment.seconds / 60);
-  matrix.print(":");
-  printPadded(currentSegment.seconds % 60);
-  matrix.show();
+  display->printTimer(currentSegment);
+  lastState.currentSeconds = currentSegment.seconds;
 }
 
 void loop() {
@@ -79,12 +99,9 @@ void loop() {
   }
 
   socket::loop();
-
   if (socket::error() < 0) {
     ESP.restart();
   }
 
-  if (millis() % 100 == 0) {
-    refreshDisplay();
-  }
+  refreshDisplay();
 }

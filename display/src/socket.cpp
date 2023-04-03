@@ -134,7 +134,7 @@ void _webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
   switch (type) {
   case WStype_DISCONNECTED:
     Serial.printf("[WSc] Disconnected!\n");
-    _error = -1;
+    _socket.beginSSL("timer.itsblue.de", 443, "/api/ws");
     break;
   case WStype_CONNECTED: {
     Serial.printf("[WSc] Connected to url: %s\n", payload);

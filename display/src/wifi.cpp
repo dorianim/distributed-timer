@@ -1,6 +1,5 @@
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
 #include <FS.h>
 #include <LittleFS.h>
 #include <WiFiManager.h>
@@ -8,7 +7,7 @@
 #include "wifi.h"
 
 namespace wifi {
-Adafruit_NeoMatrix *_matrix;
+Display *_display;
 
 const char *_style PROGMEM = R"CSS(
 <style>
@@ -54,6 +53,10 @@ String _timerId;
 // --- fs helpers ---
 String _readFile(fs::FS &fs, const char *path) {
   Serial.printf("Reading file: %s\r\n", path);
+  if (!fs.exists(path)) {
+    Serial.println("- file does not exist");
+    return String();
+  }
   File file = fs.open(path, "r");
   if (!file || file.isDirectory()) {
     Serial.println("- empty file or failed to open file");
@@ -93,12 +96,8 @@ void _configModeCallback(WiFiManager *wifiManager) {
   Serial.println(id);
 
   // print id to display
-  _matrix->clear();
-  _matrix->setTextColor(_matrix->Color(255, 255, 255));
-  _matrix->setCursor(9, 0);
   id.replace("display-", "");
-  _matrix->print(id);
-  _matrix->show();
+  _display->printWifiSetup(id);
 }
 
 String _generateId() {
@@ -113,16 +112,18 @@ void _handleSaveParams() {
   _writeFile(LittleFS, "/timerId", _timerId.c_str());
 }
 
-bool init(Adafruit_NeoMatrix *matrix, bool reset) {
-  _matrix = matrix;
+bool init(Display *display, bool reset) {
+  _display = display;
 
-  _matrix->clear();
-  _matrix->setTextColor(_matrix->Color(255, 255, 255));
-  _matrix->setCursor(15, 0);
-  _matrix->print("...");
-  _matrix->show();
+  display->printLoading();
 
-  if (!LittleFS.begin()) {
+  if (reset) {
+    Serial.println("Resetting wifi settings");
+    _wifiManager.resetSettings();
+    LittleFS.format();
+  }
+
+  if (!LittleFS.begin(true)) {
     Serial.println("LittleFS mount failed");
     return false;
   }
@@ -130,11 +131,6 @@ bool init(Adafruit_NeoMatrix *matrix, bool reset) {
   _timerId = _readFile(LittleFS, "/timerId");
   _timerIdParam.setValue(_timerId.c_str(), 32);
   Serial.println("TimerId from FS: '" + _timerId + "'");
-
-  if (reset) {
-    Serial.println("Resetting wifi settings");
-    _wifiManager.resetSettings();
-  }
 
   _wifiManager.addParameter(&_timerIdParam);
   _wifiManager.setAPCallback(_configModeCallback);
