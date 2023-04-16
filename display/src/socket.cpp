@@ -9,15 +9,15 @@ StaticJsonDocument<1024> _doc;
 String _timerId;
 // --- state ---
 TIME _timeOffset = 0;
-timer::TimerData _timerData;
+timer::TimerData *_timerData;
 TIME _latestOffsets[10] = {0};
 unsigned long _lastGetTimeSent = 0;
 int _error = 0;
 
 void _resetTimerData() {
-  _timerData.valid = false;
+  _timerData->valid = false;
   for (int i = 0; i < 10; i++) {
-    _timerData.segments[i].valid = false;
+    _timerData->segments[i].valid = false;
   }
 }
 
@@ -71,12 +71,14 @@ uint32_t _parseHexColor(const char *c) {
 void _loadDisplayOptions(JsonObject &data) {
   String pre_start_behaviour = data["pre_start_behaviour"];
   if (pre_start_behaviour == "ShowZero") {
-    _timerData.display_options.pre_start_behaviour =
+    _timerData->display_options.pre_start_behaviour =
         timer::PreStartBehaviour::SHOW_ZERO;
   } else if (pre_start_behaviour == "RunNormally") {
-    _timerData.display_options.pre_start_behaviour =
+    _timerData->display_options.pre_start_behaviour =
         timer::PreStartBehaviour::RUN_NORMALLY;
   }
+
+  _timerData->display_options.clock = data["clock"];
 }
 
 void _loadTimerData(JsonObject &data) {
@@ -85,14 +87,14 @@ void _loadTimerData(JsonObject &data) {
   if (data["segments"].size() > 10) {
     return;
   }
-  _timerData.valid = true;
-  _timerData.repeat = data["repeat"];
-  _timerData.start_at = data["start_at"].as<TIME>();
+  _timerData->valid = true;
+  _timerData->repeat = data["repeat"];
+  _timerData->start_at = data["start_at"].as<TIME>();
 
   if (data["stop_at"].isNull()) {
-    _timerData.stop_at = 0;
+    _timerData->stop_at = 0;
   } else {
-    _timerData.stop_at = data["stop_at"].as<TIME>();
+    _timerData->stop_at = data["stop_at"].as<TIME>();
   }
 
   JsonObject display_options = data["display_options"];
@@ -101,15 +103,17 @@ void _loadTimerData(JsonObject &data) {
   JsonArray segments = data["segments"];
   for (size_t i = 0; i < segments.size() && i < 10; i++) {
     JsonObject segment = segments[i];
-    _timerData.segments[i].valid = true;
-    _timerData.segments[i].time = segment["time"].as<TIME>();
-    _timerData.segments[i].count_to = segment["count_to"].as<TIME>();
-    _timerData.segments[i].sound = segment["sound"];
+    _timerData->segments[i].valid = true;
+    _timerData->segments[i].time = segment["time"].as<TIME>();
+    _timerData->segments[i].count_to = segment["count_to"].as<TIME>();
+    _timerData->segments[i].sound = segment["sound"];
+    strncpy(_timerData->segments[i].label, segment["label"].as<const char *>(),
+            32);
 
     if (segment["color"].isNull()) {
-      _timerData.segments[i].color = 0xffffff;
+      _timerData->segments[i].color = 0xffffff;
     } else {
-      _timerData.segments[i].color = _parseHexColor(segment["color"]);
+      _timerData->segments[i].color = _parseHexColor(segment["color"]);
     }
   }
 }
@@ -134,7 +138,7 @@ void _webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
   switch (type) {
   case WStype_DISCONNECTED:
     Serial.printf("[WSc] Disconnected!\n");
-    _error = -1;
+    _socket.beginSSL("timer.itsblue.de", 443, "/api/ws");
     break;
   case WStype_CONNECTED: {
     Serial.printf("[WSc] Connected to url: %s\n", payload);
@@ -168,6 +172,7 @@ void _webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
 }
 
 void init(String timerId) {
+  _timerData = timer::timerData();
   timerId.replace(" ", "");
   _timerId = timerId;
 
@@ -179,13 +184,13 @@ void init(String timerId) {
 
 void loop() {
   _socket.loop();
-  if (millis() % 1000 == 0) {
+  if (millis() - _lastGetTimeSent >= 1000) {
     _lastGetTimeSent = millis();
     _socket.sendTXT("{\"type\": \"GetTime\"}");
   }
 }
 
-timer::TimerData timerData() { return _timerData; }
+bool connected() { return _socket.isConnected(); }
 TIME offset() { return _timeOffset; }
 int error() { return _error; }
 } // namespace socket

@@ -11,12 +11,14 @@ struct TimerSegment {
   unsigned long count_to;
   bool sound;
   uint32_t color;
+  char label[32];
 };
 
 enum class PreStartBehaviour { SHOW_ZERO, RUN_NORMALLY };
 
 struct DisplayOptions {
   PreStartBehaviour pre_start_behaviour;
+  bool clock;
 };
 
 struct TimerData {
@@ -31,7 +33,10 @@ struct TimerData {
 struct ActiveSegment {
   long seconds;
   uint32_t color;
+  const char *label;
+  TIME currentTime;
 };
 
-ActiveSegment calculateCurrentSegment(TimerData timerData, TIME timeOffset);
+TimerData *timerData();
+ActiveSegment calculateCurrentSegment(TIME timeOffset);
 }; // namespace timer

@@ -1,14 +1,13 @@
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
 #include <FS.h>
 #include <LittleFS.h>
 #include <WiFiManager.h>
 
+#include "time.h"
 #include "wifi.h"
-
 namespace wifi {
-Adafruit_NeoMatrix *_matrix;
+Display *_display;
 
 const char *_style PROGMEM = R"CSS(
 <style>
@@ -42,18 +41,41 @@ a {
 .q {
   filter: invert();
 }
+.header-menu {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  justify-content: center
+}
 </style>
+
+<script>
+window.onload = () => {
+  if(window.location.pathname == "/paramsave") {
+  document.getElementsByClassName("wrap")[0].innerHTML += `
+    <form action="/restart" method="get" style="padding-bottom:20px"><button class="D">Restart device</button></form>
+  <form action="/" method="get"><button>Go back</button></form>`
+	}
+}
+</script>
 )CSS";
 
 WiFiManager _wifiManager;
 WiFiManagerParameter _timerIdParam("timerId", "Timer ID (requires restart)", "",
                                    32);
+WiFiManagerParameter
+    _timezoneOffsetParam("timezoneOffset", "Timezone offset", "2", 5,
+                         "type=\"number\" min=\"-12\" max=\"14\" step=\"0.5\"");
 
 String _timerId;
 
 // --- fs helpers ---
 String _readFile(fs::FS &fs, const char *path) {
   Serial.printf("Reading file: %s\r\n", path);
+  if (!fs.exists(path)) {
+    Serial.println("- file does not exist");
+    return String();
+  }
   File file = fs.open(path, "r");
   if (!file || file.isDirectory()) {
     Serial.println("- empty file or failed to open file");
@@ -93,12 +115,8 @@ void _configModeCallback(WiFiManager *wifiManager) {
   Serial.println(id);
 
   // print id to display
-  _matrix->clear();
-  _matrix->setTextColor(_matrix->Color(255, 255, 255));
-  _matrix->setCursor(9, 0);
   id.replace("display-", "");
-  _matrix->print(id);
-  _matrix->show();
+  _display->printWifiSetup(id);
 }
 
 String _generateId() {
@@ -109,34 +127,28 @@ String _generateId() {
 
 void _handleSaveParams() {
   Serial.println("Saving params");
-  _timerId = _timerIdParam.getValue();
-  _writeFile(LittleFS, "/timerId", _timerId.c_str());
+
+  _writeFile(LittleFS, "/timerId", _timerIdParam.getValue());
+  _writeFile(LittleFS, "/timezoneOffset", _timezoneOffsetParam.getValue());
 }
 
-bool init(Adafruit_NeoMatrix *matrix, bool reset) {
-  _matrix = matrix;
+bool init(Display *display) {
+  _display = display;
 
-  _matrix->clear();
-  _matrix->setTextColor(_matrix->Color(255, 255, 255));
-  _matrix->setCursor(15, 0);
-  _matrix->print("...");
-  _matrix->show();
+  display->printLoading("connecting wifi");
 
-  if (!LittleFS.begin()) {
+  if (!LittleFS.begin(true)) {
     Serial.println("LittleFS mount failed");
     return false;
   }
 
-  _timerId = _readFile(LittleFS, "/timerId");
-  _timerIdParam.setValue(_timerId.c_str(), 32);
+  _timerIdParam.setValue(_readFile(LittleFS, "/timerId").c_str(), 32);
+  _timezoneOffsetParam.setValue(_readFile(LittleFS, "/timezoneOffset").c_str(),
+                                5);
   Serial.println("TimerId from FS: '" + _timerId + "'");
 
-  if (reset) {
-    Serial.println("Resetting wifi settings");
-    _wifiManager.resetSettings();
-  }
-
   _wifiManager.addParameter(&_timerIdParam);
+  _wifiManager.addParameter(&_timezoneOffsetParam);
   _wifiManager.setAPCallback(_configModeCallback);
   _wifiManager.setSaveParamsCallback(_handleSaveParams);
   _wifiManager.setParamsPage(true);
@@ -146,6 +158,11 @@ bool init(Adafruit_NeoMatrix *matrix, bool reset) {
   String id = "display-" + _generateId();
   _wifiManager.setHostname(id.c_str());
   return _wifiManager.autoConnect(id.c_str());
+}
+
+void reset() {
+  Serial.println("Resetting wifi settings");
+  _wifiManager.resetSettings();
 }
 
 void loop() {
@@ -160,6 +177,8 @@ void loop() {
   }
 }
 bool connected() { return WiFi.status() == WL_CONNECTED; }
-String timerId() { return _timerId; }
-
+String timerId() { return _timerIdParam.getValue(); }
+float timezoneOffset() {
+  return String(_timezoneOffsetParam.getValue()).toFloat();
+}
 } // namespace wifi

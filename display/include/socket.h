@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 
+#include "display.h"
 #include "timer.h"
 
 namespace socket {
@@ -9,7 +10,7 @@ namespace socket {
 void init(String timerId);
 void loop();
 
-timer::TimerData timerData();
+bool connected();
 TIME offset();
 int error();
 } // namespace socket

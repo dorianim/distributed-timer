@@ -1,32 +1,38 @@
+#include <time.h>
+
 #include "timer.h"
 
 namespace timer {
 
-ActiveSegment calculateCurrentSegment(TimerData timerData, TIME timeOffset) {
-  if (!timerData.valid || timeOffset == 0) {
-    return {0, 0xfff};
+TimerData _timerData;
+
+TimerData *timerData() { return &_timerData; }
+
+ActiveSegment calculateCurrentSegment(TIME timeOffset) {
+  if (!_timerData.valid || timeOffset == 0) {
+    return {0, 0xfff, "", 0};
   }
 
   TIME currentTime = (TIME)millis() + timeOffset;
-  if (currentTime < timerData.start_at &&
-      timerData.display_options.pre_start_behaviour ==
+  if (currentTime < _timerData.start_at &&
+      _timerData.display_options.pre_start_behaviour ==
           PreStartBehaviour::SHOW_ZERO) {
-    return {0, 0xfff};
+    return {0, 0xfff, "", currentTime};
   }
 
-  if (timerData.stop_at != 0 && currentTime > timerData.stop_at) {
-    currentTime = timerData.stop_at;
+  if (_timerData.stop_at != 0 && currentTime > _timerData.stop_at) {
+    currentTime = _timerData.stop_at;
   }
 
-  long elapsedTime = currentTime - timerData.start_at;
+  long elapsedTime = currentTime - _timerData.start_at;
 
   long totalTimePerRound = 0;
-  for (int i = 0; i < 10 && timerData.segments[i].valid; i++) {
-    totalTimePerRound += timerData.segments[i].time;
+  for (int i = 0; i < 10 && _timerData.segments[i].valid; i++) {
+    totalTimePerRound += _timerData.segments[i].time;
   }
 
-  if (!timerData.repeat && elapsedTime > totalTimePerRound) {
-    return {0, 0xfff};
+  if (!_timerData.repeat && elapsedTime > totalTimePerRound) {
+    return {0, 0xfff, "", currentTime};
   }
 
   long timeInCurrentRound = elapsedTime % totalTimePerRound;
@@ -34,17 +40,18 @@ ActiveSegment calculateCurrentSegment(TimerData timerData, TIME timeOffset) {
   int currentSegmentIndex = 0;
   long timeInCurrentSegment = 0;
   while (timeInCurrentRound > 0 &&
-         timerData.segments[currentSegmentIndex].valid) {
+         _timerData.segments[currentSegmentIndex].valid) {
     timeInCurrentSegment =
-        timerData.segments[currentSegmentIndex].time - timeInCurrentRound;
-    timeInCurrentRound -= timerData.segments[currentSegmentIndex].time;
+        _timerData.segments[currentSegmentIndex].time - timeInCurrentRound;
+    timeInCurrentRound -= _timerData.segments[currentSegmentIndex].time;
     currentSegmentIndex++;
   }
 
-  timeInCurrentSegment += timerData.segments[currentSegmentIndex - 1].count_to;
+  timeInCurrentSegment += _timerData.segments[currentSegmentIndex - 1].count_to;
 
   return {timeInCurrentSegment / 1000,
-          timerData.segments[currentSegmentIndex - 1].color};
+          _timerData.segments[currentSegmentIndex - 1].color,
+          _timerData.segments[currentSegmentIndex - 1].label, currentTime};
 }
 
 }; // namespace timer
