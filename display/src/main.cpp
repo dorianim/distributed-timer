@@ -42,7 +42,7 @@ HUB75_I2S_CFG::i2s_pins _pins = {R1_PIN, G1_PIN,  B1_PIN, R2_PIN, G2_PIN,
                                  E_PIN,  LAT_PIN, OE_PIN, CLK_PIN};
 HUB75_I2S_CFG mxconfig(64,   // Module width
                        64,   // Module height
-                       1,    // chain length
+                       2,    // chain length
                        _pins // pin mapping,
 );
 
@@ -55,44 +55,52 @@ void setup() {
   mxconfig.i2sspeed = HUB75_I2S_CFG::HZ_20M;
   mxconfig.driver = HUB75_I2S_CFG::FM6124;
   mxconfig.double_buff = true;
-  display = Display::from(MatrixPanel_I2S_DMA(mxconfig));
-  display->setup();
+  mxconfig.setPixelColorDepthBits(4);
+  display = Display::from(new MatrixPanel_I2S_DMA(mxconfig));
 
-  if (!wifi::init(display, false)) {
+  pinMode(33, INPUT_PULLUP);
+
+  if (digitalRead(33) == LOW) {
+    display->printLoading("reset!");
+    wifi::reset();
+    delay(5000);
+
+    display->printLoading("release button!");
+    while (digitalRead(33) == LOW) {
+      delay(100);
+    }
+
+    ESP.restart();
+  }
+
+  display->printLoading("connecting wifi");
+  if (!wifi::init(display)) {
     ESP.restart();
     delay(10000);
   }
 
+  display->printLoading("connecting socket");
   socket::init(wifi::timerId());
 }
 
-struct DisplayState {
-  int error;
-  unsigned long long currentSeconds;
-};
-DisplayState lastState = {0, 0};
-
 void refreshDisplay() {
-  timer::ActiveSegment currentSegment =
-      timer::calculateCurrentSegment(socket::timerData(), socket::offset());
-
-  if (socket::error() == lastState.error &&
-      currentSegment.seconds == lastState.currentSeconds)
-    return;
-
   if (socket::error() > 0) {
     display->printError(socket::error());
-    lastState.error = socket::error();
+    return;
+  }
+
+  timer::ActiveSegment currentSegment =
+      timer::calculateCurrentSegment(socket::offset());
+
+  if (currentSegment.currentTime == 0) {
+    display->printLoading("awaiting data");
     return;
   }
 
   display->printTimer(currentSegment);
-  lastState.currentSeconds = currentSegment.seconds;
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
   wifi::loop();
   if (!wifi::connected()) {
     ESP.restart();
@@ -104,4 +112,5 @@ void loop() {
   }
 
   refreshDisplay();
+  delay(10);
 }

@@ -4,8 +4,8 @@
 #include <LittleFS.h>
 #include <WiFiManager.h>
 
+#include "time.h"
 #include "wifi.h"
-
 namespace wifi {
 Display *_display;
 
@@ -41,12 +41,31 @@ a {
 .q {
   filter: invert();
 }
+.header-menu {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  justify-content: center
+}
 </style>
+
+<script>
+window.onload = () => {
+  if(window.location.pathname == "/paramsave") {
+  document.getElementsByClassName("wrap")[0].innerHTML += `
+    <form action="/restart" method="get" style="padding-bottom:20px"><button class="D">Restart device</button></form>
+  <form action="/" method="get"><button>Go back</button></form>`
+	}
+}
+</script>
 )CSS";
 
 WiFiManager _wifiManager;
 WiFiManagerParameter _timerIdParam("timerId", "Timer ID (requires restart)", "",
                                    32);
+WiFiManagerParameter
+    _timezoneOffsetParam("timezoneOffset", "Timezone offset", "2", 5,
+                         "type=\"number\" min=\"-12\" max=\"14\" step=\"0.5\"");
 
 String _timerId;
 
@@ -108,31 +127,28 @@ String _generateId() {
 
 void _handleSaveParams() {
   Serial.println("Saving params");
-  _timerId = _timerIdParam.getValue();
-  _writeFile(LittleFS, "/timerId", _timerId.c_str());
+
+  _writeFile(LittleFS, "/timerId", _timerIdParam.getValue());
+  _writeFile(LittleFS, "/timezoneOffset", _timezoneOffsetParam.getValue());
 }
 
-bool init(Display *display, bool reset) {
+bool init(Display *display) {
   _display = display;
 
-  display->printLoading();
-
-  if (reset) {
-    Serial.println("Resetting wifi settings");
-    _wifiManager.resetSettings();
-    LittleFS.format();
-  }
+  display->printLoading("connecting wifi");
 
   if (!LittleFS.begin(true)) {
     Serial.println("LittleFS mount failed");
     return false;
   }
 
-  _timerId = _readFile(LittleFS, "/timerId");
-  _timerIdParam.setValue(_timerId.c_str(), 32);
+  _timerIdParam.setValue(_readFile(LittleFS, "/timerId").c_str(), 32);
+  _timezoneOffsetParam.setValue(_readFile(LittleFS, "/timezoneOffset").c_str(),
+                                5);
   Serial.println("TimerId from FS: '" + _timerId + "'");
 
   _wifiManager.addParameter(&_timerIdParam);
+  _wifiManager.addParameter(&_timezoneOffsetParam);
   _wifiManager.setAPCallback(_configModeCallback);
   _wifiManager.setSaveParamsCallback(_handleSaveParams);
   _wifiManager.setParamsPage(true);
@@ -142,6 +158,11 @@ bool init(Display *display, bool reset) {
   String id = "display-" + _generateId();
   _wifiManager.setHostname(id.c_str());
   return _wifiManager.autoConnect(id.c_str());
+}
+
+void reset() {
+  Serial.println("Resetting wifi settings");
+  _wifiManager.resetSettings();
 }
 
 void loop() {
@@ -156,6 +177,8 @@ void loop() {
   }
 }
 bool connected() { return WiFi.status() == WL_CONNECTED; }
-String timerId() { return _timerId; }
-
+String timerId() { return _timerIdParam.getValue(); }
+float timezoneOffset() {
+  return String(_timezoneOffsetParam.getValue()).toFloat();
+}
 } // namespace wifi
