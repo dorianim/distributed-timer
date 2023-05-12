@@ -44,7 +44,6 @@
 		}
 
 		const fluctuation = Math.abs(currentOffset - newOffset);
-		console.log(fluctuation, currentFluctuation);
 
 		if (
 			currentFluctuation &&
@@ -66,7 +65,6 @@
 	const handleNewOffset = (newOffset: number) => {
 		// check if we are in a 30% margin
 		if (!isOffsetInMargin(newOffset)) {
-			console.log('not in margin');
 			return;
 		}
 
