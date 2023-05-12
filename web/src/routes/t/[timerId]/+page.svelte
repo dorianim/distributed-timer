@@ -8,45 +8,69 @@
 	import { API_WS_URL } from '../../../stores';
 	import NoSleep from 'nosleep.js';
 	import { goto } from '$app/navigation';
-	import type { Segment } from '../../../types/segment';
+	import { onDestroy, onMount } from 'svelte';
 
 	export let data: PageData;
 
 	const noSleep = new NoSleep();
 
+	let currentOffset: number | undefined;
+	let currentFluctuation: number | undefined;
+	let latestOffsets: number[] = [];
+	let latestFluctuations: number[] = [];
+
 	let soundEnabled: boolean;
-	let timeOffset: number | undefined;
 	let timerData: TimerType | undefined;
 	let lastGetTimeSent = 0;
-	let latestOffsets: number[] = [];
 	let socket: WebSocket | undefined;
 
-	const isOffsetInMargin = (offset: number) => {
-		if (!timeOffset) {
-			return true;
-		}
-
-		let margin = timeOffset * 0.3;
-		return offset > timeOffset - margin && offset < timeOffset + margin;
-	};
-
-	const handleNewOffset = (offset: number) => {
-		// check if we are in a 30% margin
-		if (!isOffsetInMargin(offset)) {
-			return;
-		}
-
-		latestOffsets.push(offset);
-		if (latestOffsets.length > 10) {
-			latestOffsets.shift();
+	const pushValueAndCaluclateAverage = (values: number[], newValue: number) => {
+		values.push(newValue);
+		if (values.length > 10) {
+			values.shift();
 		}
 
 		let sum = 0;
-		for (let i = 0; i < latestOffsets.length; i++) {
-			sum += latestOffsets[i];
+		for (let i = 0; i < values.length; i++) {
+			sum += values[i];
 		}
 
-		timeOffset = sum / latestOffsets.length;
+		return sum / values.length;
+	};
+
+	const isOffsetInMargin = (newOffset: number) => {
+		if (!currentOffset) {
+			return true;
+		}
+
+		const fluctuation = Math.abs(currentOffset - newOffset);
+		console.log(fluctuation, currentFluctuation);
+
+		if (
+			currentFluctuation &&
+			latestFluctuations.length > 5 &&
+			fluctuation > currentFluctuation * 4
+		) {
+			return false;
+		}
+
+		currentFluctuation = pushValueAndCaluclateAverage(latestFluctuations, fluctuation);
+
+		if (latestFluctuations.length < 10) {
+			return true;
+		}
+
+		return fluctuation < currentFluctuation * 2;
+	};
+
+	const handleNewOffset = (newOffset: number) => {
+		// check if we are in a 30% margin
+		if (!isOffsetInMargin(newOffset)) {
+			console.log('not in margin');
+			return;
+		}
+
+		currentOffset = pushValueAndCaluclateAverage(latestOffsets, newOffset);
 	};
 
 	const enableSound = () => {
@@ -88,8 +112,8 @@
 				case 'Timestamp':
 					const now = performance.now();
 					const getTimeRoundTrip = now - lastGetTimeSent;
-					timeOffset = data.data + getTimeRoundTrip / 2 - now;
-					handleNewOffset(timeOffset);
+					let newOffset = data.data + getTimeRoundTrip / 2 - now;
+					handleNewOffset(newOffset);
 					break;
 				case 'Error':
 					throwError(data.data[0], data.data[1]);
@@ -134,6 +158,10 @@
 		}
 	}
 
+	onDestroy(() => {
+		socket?.close();
+	});
+
 	$: {
 		if (timerData && !soundEnabled && get(modalStore).length == 0) {
 			const d: ModalSettings = {
@@ -158,12 +186,15 @@
 	}
 </script>
 
-{#if timerData && timeOffset}
+{#if timerData && currentOffset}
 	<Timer
 		{timerData}
 		{soundEnabled}
-		{timeOffset}
-		displayOptionsOverride={{ clock: data.url.searchParams.get('clock') != 'false' }}
+		timeOffset={currentOffset}
+		displayOptionsOverride={{
+			...timerData.display_options,
+			clock: data.url.searchParams.get('clock') != 'false'
+		}}
 	/>
 {:else}
 	<div

@@ -95,7 +95,7 @@
 		currentSegment = calculateCurrentSegment();
 		const { timerText, label, color, seconds } = currentSegment;
 
-		if (timerSpan.innerText !== timerText) {
+		if (timerSpan !== null && timerSpan.innerText !== timerText) {
 			timerSpan.innerText = timerText;
 			labelSpan.innerText = label;
 			backgroundDiv.style.setProperty(
