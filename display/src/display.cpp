@@ -62,6 +62,7 @@ Hub75_Display::Hub75_Display(MatrixPanel_I2S_DMA *matrix)
   _matrix->clearScreen();
   _matrix->flipDMABuffer();
   _matrix->setBrightness8(250);
+  _matrix->cp437(true);
 
   for (int i = 0; i < 10; i++) {
     brand_letter_delays[i] = i * DIM_DELAY_ININTIAL_STEP;
@@ -135,9 +136,19 @@ void Hub75_Display::loop() {
 
     _matrix->setTextSize(1);
     _setTextColor(0xff, 0xff, 0xff);
-    uint8_t textlen = strlen(_segment.label);
-    _matrix->setCursor((128 - textlen * 6) / 2, 3);
-    _matrix->print(_segment.label);
+    String label = _segment.label;
+    // replace according to
+    // https://en.wikipedia.org/wiki/Code_page_437#Character_set
+    label.replace("ü", "\x81");
+    label.replace("ö", "\x94");
+    label.replace("ä", "\x84");
+    label.replace("Ü", "\x9A");
+    label.replace("Ö", "\x99");
+    label.replace("Ä", "\x8E");
+    label.replace("ß", "\xE1");
+
+    _matrix->setCursor((128 - label.length() * 6) / 2, 3);
+    _matrix->print(label);
 
     _setTextColor(_segment.color);
     _matrix->setTextSize(5);
