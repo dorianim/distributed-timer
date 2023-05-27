@@ -8,11 +8,14 @@ WebSocketsClient _socket;
 StaticJsonDocument<1024> _doc;
 String _timerId;
 // --- state ---
-TIME _timeOffset = 0;
-timer::TimerData *_timerData;
+TIME _currentOffset = 0;
+TIME _currentFluctuation = 0;
 TIME _latestOffsets[10] = {0};
+TIME _latestFluctuations[10] = {0};
+
 unsigned long _lastGetTimeSent = 0;
 int _error = 0;
+timer::TimerData *_timerData;
 
 void _resetTimerData() {
   _timerData->valid = false;
@@ -21,12 +24,54 @@ void _resetTimerData() {
   }
 }
 
+TIME _pushValueAndCaluclateAverage(TIME values[10], TIME newValue) {
+  for (int i = 0; i < 9; i++) {
+    values[i] = values[i + 1];
+  }
+  values[9] = newValue;
+
+  TIME sum = 0;
+  int validOffsets = 0;
+
+  for (int i = 0; i < 10; i++) {
+    sum += values[i];
+    if (values[i] != 0) {
+      validOffsets++;
+    }
+  }
+
+  return sum / validOffsets;
+};
+
+int _countValidValues(TIME values[10]) {
+  int validValues = 0;
+  for (int i = 0; i < 10; i++) {
+    if (values[i] != 0) {
+      validValues++;
+    }
+  }
+  return validValues;
+}
+
 bool _isOffsetInMargin(TIME offset) {
-  if (_timeOffset == 0)
+  if (_currentOffset == 0)
     return true;
 
-  TIME margin = _timeOffset * 0.3;
-  return offset > _timeOffset - margin && offset < _timeOffset + margin;
+  TIME fluctuation = abs((long long)_currentOffset - (long long)offset);
+
+  if (_currentFluctuation != 0 && _countValidValues(_latestFluctuations) > 5 &&
+      fluctuation > _currentFluctuation * 4) {
+    return false;
+  }
+
+  _currentFluctuation =
+      _pushValueAndCaluclateAverage(_latestFluctuations, fluctuation);
+
+  if (_countValidValues(_latestFluctuations) < 10) {
+    return true;
+  }
+
+  return fluctuation < _currentFluctuation * 2;
 }
 
 void _handleNewOffset(TIME offset) {
@@ -34,22 +79,7 @@ void _handleNewOffset(TIME offset) {
     return;
   }
 
-  for (int i = 0; i < 9; i++) {
-    _latestOffsets[i] = _latestOffsets[i + 1];
-  }
-  _latestOffsets[9] = offset;
-
-  TIME sum = 0;
-  int validOffsets = 0;
-
-  for (int i = 0; i < 10; i++) {
-    sum += _latestOffsets[i];
-    if (_latestOffsets[i] != 0) {
-      validOffsets++;
-    }
-  }
-
-  _timeOffset = sum / validOffsets;
+  _currentOffset = _pushValueAndCaluclateAverage(_latestOffsets, offset);
 }
 
 uint32_t _parseHexColor(const char *c) {
@@ -191,6 +221,6 @@ void loop() {
 }
 
 bool connected() { return _socket.isConnected(); }
-TIME offset() { return _timeOffset; }
+TIME offset() { return _currentOffset; }
 int error() { return _error; }
 } // namespace socket
