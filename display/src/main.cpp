@@ -60,16 +60,17 @@ void setup() {
 
   pinMode(33, INPUT_PULLUP);
 
-  if (digitalRead(33) == LOW) {
+  if (digitalRead(21) == LOW) {
     display->printLoading("reset!");
     wifi::reset();
-    delay(5000);
+    delay(3000);
 
     display->printLoading("release button!");
     while (digitalRead(33) == LOW) {
       delay(100);
     }
 
+    delay(100);
     ESP.restart();
   }
 

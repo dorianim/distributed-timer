@@ -133,29 +133,26 @@
 >
 	<span
 		bind:this={labelSpan}
-		class="absolute top-[10%] left-[50%] translate-x-[-50%] translate-y-[-50%] text-[5vw]"
+		class="absolute top-[10%] left-[50%] translate-x-[-50%] translate-y-[-50%] text-[5vw] text-auto"
 	/>
 	<span
 		bind:this={timerSpan}
-		class={currentSegment.timerText.length > 5 ? 'text-[23.5vw]' : 'text-[35vw]'}
+		class="{currentSegment.timerText.length > 5 ? 'text-[23.5vw]' : 'text-[35vw]'} text-auto"
 	/>
 	{#if timerData.display_options.clock && (!displayOptionsOverride || displayOptionsOverride.clock)}
-		<span class="absolute bottom-[10%] left-[50%] translate-x-[-50%] translate-y-[50%] text-[5vw]">
-			{new Date(currentSegment.currentTime).toLocaleTimeString()}
+		<span
+			class="absolute bottom-[10%] left-[50%] translate-x-[-50%] translate-y-[50%] text-[5vw] text-auto"
+		>
+			{new Date(currentSegment.currentTime).toLocaleTimeString([], {
+				hour: '2-digit',
+				minute: '2-digit'
+			})}
 		</span>
 	{/if}
 </div>
 
-<style>
+<style lang="postcss">
 	.background-color {
 		background-color: var(--backgroundColor);
-	}
-
-	span {
-		background: inherit;
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-		filter: sepia(5) saturate(100) invert(1) grayscale(1) contrast(9);
 	}
 </style>

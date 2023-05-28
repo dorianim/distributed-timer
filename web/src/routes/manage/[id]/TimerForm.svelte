@@ -19,14 +19,22 @@
 		faPlay,
 		faPauseCircle,
 		faVolumeUp,
-		faVolumeMute
+		faVolumeMute,
+		faArrowUp,
+		faArrowDown,
+		faEdit
 	} from '@fortawesome/free-solid-svg-icons';
 	import type { Timer } from '../../../types/timer';
-	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from '../../../utils/timer';
+	import {
+		calculateTimeInCurrentRound,
+		calculateTimeInCurrentSegment,
+		getTimerText
+	} from '../../../utils/timer';
 	import type { Segment } from '../../../types/segment';
 	import SegmentDetailsForm from './SegmentDetailsForm.svelte';
 	import TimeInputField from './TimeInputField.svelte';
 	import HelpPopup from '../../../components/HelpPopup.svelte';
+	import SegmentInfoBox from './SegmentInfoBox.svelte';
 
 	interface TimerFormData {
 		start_at_date: string;
@@ -200,22 +208,21 @@
 	<strong>Timer sequence:</strong>
 
 	{#each formData.segments as segment, i}
-		<div class="card p-4 w-full grid gap-3 sm:grid-cols-2 lg:grid-cols-3 items-center">
-			<input
-				class="input variant-form-material"
-				type="text"
-				placeholder="label"
-				bind:value={segment.label}
-				required
+		<div
+			class="card w-full grid sm:grid-cols-2 md:grid-cols-3 items-center p-[2px]"
+			draggable="true"
+		>
+			<SegmentInfoBox
+				{segment}
+				class="rounded-t-md rounded-b-2xl md:rounded-l-md md:rounded-r-2xl justify-center md:justify-start"
 			/>
-			<TimeInputField bind:time={segment.time} />
 
-			<div class="flex items-center justify-around sm:col-span-2 lg:col-span-1">
+			<div class="p-2 flex items-center justify-around col-span-2 md:col-span-1">
 				<button
 					type="button"
-					class="btn-icon variant-filled-secondary"
-					disabled={formData.segments.length === 1}
-					on:click={() => openSegmentDetailsModal(i)}><Fa icon={faGear} /></button
+					class="btn variant-filled-secondary"
+					on:click={() => openSegmentDetailsModal(i)}
+					><span><Fa icon={faEdit} /></span><span>Edit</span></button
 				>
 				<button
 					type="button"
@@ -229,21 +236,45 @@
 
 				<button
 					type="button"
-					class="btn-icon variant-filled-success"
+					class="btn-icon variant-ringed-tertiary"
+					disabled={i === 0}
 					on:click={() => {
-						console.log('add segment');
-						formData.segments.splice(i + 1, 0, {
-							label: `Segment ${formData.segments.length + 1}`,
-							time: 30 * 1000,
-							sound: false,
-							count_to: 0
-						});
+						const segment = formData.segments[i];
+						formData.segments[i] = formData.segments[i - 1];
+						formData.segments[i - 1] = segment;
 						formData.segments = [...formData.segments];
-					}}><Fa icon={faAdd} /></button
+					}}><Fa icon={faArrowUp} /></button
+				>
+
+				<button
+					type="button"
+					class="btn-icon variant-ringed-tertiary"
+					disabled={i === formData.segments.length - 1}
+					on:click={() => {
+						const segment = formData.segments[i];
+						formData.segments[i] = formData.segments[i + 1];
+						formData.segments[i + 1] = segment;
+						formData.segments = [...formData.segments];
+					}}><Fa icon={faArrowDown} /></button
 				>
 			</div>
 		</div>
 	{/each}
+
+	<button
+		type="button"
+		class="btn variant-glass-success p-2"
+		on:click={() => {
+			console.log('add segment');
+			formData.segments.push({
+				label: `Segment ${formData.segments.length + 1}`,
+				time: 30 * 1000,
+				sound: false,
+				count_to: 0
+			});
+			formData.segments = [...formData.segments];
+		}}><span><Fa icon={faAdd} /></span> <span>New segment</span></button
+	>
 
 	<SlideToggle active="bg-primary-500" name="repeat" size="sm" bind:checked={formData.repeat}>
 		repeat

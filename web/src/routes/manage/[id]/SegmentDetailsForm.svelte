@@ -5,6 +5,7 @@
 	import type { Segment } from '../../../types/segment';
 	import { getTimerText } from '../../../utils/timer';
 	import TimeInputField from './TimeInputField.svelte';
+	import SegmentInfoBox from './SegmentInfoBox.svelte';
 
 	export let segment: Segment;
 
@@ -14,14 +15,12 @@
 	};
 </script>
 
-<div class="card p-4 w-modal shadow-xl space-y-4">
-	<header class="text-2xl font-bold">{segment.label}</header>
-	<p>
-		This timer will count from {getTimerText(segment.time + segment.count_to - 1)} to {getTimerText(
-			segment.count_to
-		)}
-	</p>
-	<form class="modal-form space-y-4 rounded-container-token">
+<div class="card w-modal shadow-xl space-y-4 p-[2px]">
+	<SegmentInfoBox {segment} class="rounded-t-md rounded-b-2xl justify-center" />
+	<form
+		class="modal-form p-4 space-y-4 rounded-container-token"
+		on:submit|preventDefault={() => {}}
+	>
 		<label class="label">
 			Label:
 			<input
@@ -56,7 +55,7 @@
 				{/if}
 			</div>
 		</label>
-	</form>
 
-	<button class="btn variant-filled" on:click={onSubmit}>Ok</button>
+		<button class="btn variant-filled" on:click={onSubmit}>Ok</button>
+	</form>
 </div>
