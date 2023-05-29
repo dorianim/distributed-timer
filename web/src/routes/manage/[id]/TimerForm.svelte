@@ -1,7 +1,6 @@
 <script lang="ts">
 	import {
 		modalStore,
-		popup,
 		SlideToggle,
 		type ModalComponent,
 		type ModalSettings
@@ -10,29 +9,19 @@
 	import {
 		faTrash,
 		faAdd,
-		faRemove,
-		faGear,
-		faQuestionCircle,
 		faRefresh,
 		faSave,
 		faPause,
 		faPlay,
 		faPauseCircle,
-		faVolumeUp,
-		faVolumeMute,
 		faArrowUp,
 		faArrowDown,
 		faEdit
 	} from '@fortawesome/free-solid-svg-icons';
 	import type { Timer } from '../../../types/timer';
-	import {
-		calculateTimeInCurrentRound,
-		calculateTimeInCurrentSegment,
-		getTimerText
-	} from '../../../utils/timer';
+	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from '../../../utils/timer';
 	import type { Segment } from '../../../types/segment';
-	import SegmentDetailsForm from './SegmentDetailsForm.svelte';
-	import TimeInputField from './TimeInputField.svelte';
+	import SegmentForm from './SegmentForm.svelte';
 	import HelpPopup from '../../../components/HelpPopup.svelte';
 	import SegmentInfoBox from './SegmentInfoBox.svelte';
 
@@ -174,7 +163,7 @@
 
 	const openSegmentDetailsModal = (i: number) => {
 		const modalComponent: ModalComponent = {
-			ref: SegmentDetailsForm,
+			ref: SegmentForm,
 			props: { segment: { ...formData.segments[i] } }
 		};
 
@@ -192,7 +181,6 @@
 	};
 
 	formData = timerDataToFormData(timerData);
-	$: console.log(formData);
 </script>
 
 <form class="w-full grid gap-3" on:submit={handleSubmit}>
