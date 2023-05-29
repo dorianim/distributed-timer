@@ -16,7 +16,8 @@
 		faPauseCircle,
 		faArrowUp,
 		faArrowDown,
-		faEdit
+		faEdit,
+		faCheck
 	} from '@fortawesome/free-solid-svg-icons';
 	import type { Timer } from '../../../types/timer';
 	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from '../../../utils/timer';
@@ -24,6 +25,7 @@
 	import SegmentForm from './SegmentForm.svelte';
 	import HelpPopup from '../../../components/HelpPopup.svelte';
 	import SegmentInfoBox from './SegmentInfoBox.svelte';
+	import { slide } from 'svelte/transition';
 
 	interface TimerFormData {
 		start_at_date: string;
@@ -42,6 +44,7 @@
 	export let onSubmit: (timerData: Timer) => void;
 
 	let formData: TimerFormData;
+	let editingSegment: number | undefined = undefined;
 
 	const handleSubmit = (e: Event) => {
 		e.preventDefault();
@@ -161,23 +164,12 @@
 		};
 	};
 
-	const openSegmentDetailsModal = (i: number) => {
-		const modalComponent: ModalComponent = {
-			ref: SegmentForm,
-			props: { segment: { ...formData.segments[i] } }
-		};
-
-		const d: ModalSettings = {
-			type: 'component',
-			component: modalComponent,
-			response: (segment: Segment | false) => {
-				if (segment !== false) {
-					formData.segments[i] = segment;
-				}
-			}
-		};
-
-		modalStore.trigger(d);
+	const editSegment = (i: number) => {
+		if (editingSegment === i) {
+			editingSegment = undefined;
+		} else {
+			editingSegment = i;
+		}
 	};
 
 	formData = timerDataToFormData(timerData);
@@ -208,19 +200,15 @@
 			<div class="p-2 flex items-center justify-around col-span-2 md:col-span-1">
 				<button
 					type="button"
-					class="btn variant-filled-secondary"
-					on:click={() => openSegmentDetailsModal(i)}
-					><span><Fa icon={faEdit} /></span><span>Edit</span></button
+					class="btn {editingSegment === i ? 'variant-filled-success' : 'variant-filled-secondary'}"
+					on:click={() => editSegment(i)}
 				>
-				<button
-					type="button"
-					class="btn-icon variant-filled-error"
-					disabled={formData.segments.length === 1}
-					on:click={() => {
-						console.log('remove segment');
-						formData.segments = formData.segments.filter((_, index) => index !== i);
-					}}><Fa icon={faTrash} /></button
-				>
+					{#if editingSegment === i}
+						<span><Fa icon={faCheck} /></span><span>Done</span>
+					{:else}
+						<span><Fa icon={faEdit} /></span><span>Edit</span>
+					{/if}
+				</button>
 
 				<button
 					type="button"
@@ -245,7 +233,23 @@
 						formData.segments = [...formData.segments];
 					}}><Fa icon={faArrowDown} /></button
 				>
+
+				<button
+					type="button"
+					class="btn-icon variant-filled-error"
+					disabled={formData.segments.length === 1}
+					on:click={() => {
+						console.log('remove segment');
+						formData.segments = formData.segments.filter((_, index) => index !== i);
+					}}><Fa icon={faTrash} /></button
+				>
 			</div>
+
+			{#if editingSegment === i}
+				<div class="md:col-span-3 col-span-2 overflow-hidden" transition:slide|local>
+					<SegmentForm bind:segment class="w-full space-y-4" />
+				</div>
+			{/if}
 		</div>
 	{/each}
 

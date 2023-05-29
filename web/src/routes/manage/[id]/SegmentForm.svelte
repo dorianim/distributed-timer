@@ -1,22 +1,16 @@
 <script lang="ts">
 	import { faRemove } from '@fortawesome/free-solid-svg-icons';
-	import { modalStore, SlideToggle } from '@skeletonlabs/skeleton';
+	import { SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
 	import type { Segment } from '../../../types/segment';
-	import { getTimerText } from '../../../utils/timer';
 	import TimeInputField from './TimeInputField.svelte';
-	import SegmentInfoBox from './SegmentInfoBox.svelte';
 
 	export let segment: Segment;
-
-	const onSubmit = () => {
-		if ($modalStore[0].response) $modalStore[0].response(segment);
-		modalStore.close();
-	};
+	let clazz: string = '';
+	export { clazz as class };
 </script>
 
-<div class="card w-modal shadow-xl space-y-4 p-[2px]">
-	<SegmentInfoBox {segment} class="rounded-t-md rounded-b-2xl justify-center" />
+<div class="p-[2px] {clazz}">
 	<form
 		class="modal-form p-4 space-y-4 rounded-container-token"
 		on:submit|preventDefault={() => {}}
@@ -55,7 +49,5 @@
 				{/if}
 			</div>
 		</label>
-
-		<button class="btn variant-filled" on:click={onSubmit}>Ok</button>
 	</form>
 </div>
