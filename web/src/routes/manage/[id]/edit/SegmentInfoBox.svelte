@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { Segment } from '../../../types/segment';
-	import { getTimerText } from '../../../utils/timer';
+	import type { Segment } from 'types/segment';
+	import { getTimerText } from 'utils/timer';
 
 	export let segment: Segment;
 

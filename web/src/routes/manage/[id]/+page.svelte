@@ -1,48 +1,46 @@
 <script lang="ts">
-	import { ProgressRadial, SlideToggle } from '@skeletonlabs/skeleton';
-	import { get } from 'svelte/store';
-	import { API_URL } from '../../../stores';
-	import type { Timer, TimerUpdateRequest } from '../../../types/timer';
-	import type { PageData } from './$types';
-	import TimerForm from './TimerForm.svelte';
 	import Fa from 'svelte-fa';
-	import { faClose, faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
-	import { goto } from '$app/navigation';
-	import { browser } from '$app/environment';
+	import type { PageData } from './$types';
+	import {
+		faCircleCheck,
+		faClose,
+		faEdit,
+		faPause,
+		faPlay,
+		faRefresh
+	} from '@fortawesome/free-solid-svg-icons';
+	import { calculateNewStartAt, updateTimer, type TimerAction } from './helpers';
+	import type { Timer } from 'types/timer';
+	import { ProgressRadial } from '@skeletonlabs/skeleton';
 
 	export let data: PageData;
 	let { timerData } = data;
 	let submitResult: Promise<Timer | void> = Promise.resolve();
 
-	$: {
-		if (browser && !localStorage.getItem('token')) goto('/manage/login');
-	}
+	const handleButton = (action: TimerAction) => {
+		console.log('button submit', action);
+		const start_at = calculateNewStartAt(timerData.segments, timerData, action);
+		const stop_at = action === 'stop' ? new Date().getTime() : undefined;
+		const newTimer = {
+			...timerData,
+			start_at: start_at,
+			stop_at: stop_at
+		};
 
-	const onSubmit = async (newTimerData: TimerUpdateRequest) => {
-		submitResult = fetch(`${get(API_URL)}/timer/${data.params.id}`, {
-			method: 'PUT',
-			body: JSON.stringify(newTimerData),
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${localStorage.getItem('token')}`
-			}
-		})
-			.then((res) => {
-				if (!res.ok) {
-					throw new Error(res.statusText);
-				}
-				return res.json();
-			})
-			.then((timer: Timer) => {
-				timerData = timer;
-				return timer;
-			});
+		submitResult = updateTimer(timerData.id, newTimer, data.fetch).then((timer: Timer) => {
+			timerData = timer;
+			return timer;
+		});
 	};
 </script>
 
 <h2 class="text-center">Manage timer <strong>{timerData.id}</strong></h2>
 
-<div class=" m-auto w-full items-center">
+<div class="w-full m-auto items-center">
+	<div class="w-full h-[500px] px-52 pb-4">
+		<iframe class="w-full h-full card" src={`/t/${timerData.id}`} title="timer preview" />
+	</div>
+
 	{#await submitResult}
 		<div class="flex items-center justify-center">
 			<ProgressRadial class="w-10" />
@@ -60,27 +58,34 @@
 				>
 			</aside>
 		{/if}
-		<TimerForm {timerData} {onSubmit} />
-	{:catch error}
-		<div class="alert variant-ghost-error">
-			<Fa icon={faCircleExclamation} class="text-2xl" />
-			<div class="alert-message">
-				<h3>Error</h3>
-				<p>{error}</p>
-			</div>
-			<button
-				class="btn-icon"
-				on:click={() => {
-					submitResult = Promise.resolve();
-				}}><Fa icon={faClose} /></button
-			>
-		</div>
-		<TimerForm {timerData} {onSubmit} />
-	{/await}
-</div>
 
-<div class="m-auto text-center">
-	Alternatively, you can <a href="/">view an existing timer</a>,
-	<a href="/manage/login">manage a diffrent existing timer</a> or
-	<a href="/manage/create">create a new timer</a>
+		<div class="grid grid-cols-2 gap-3 pb-4">
+			<button
+				class="btn variant-filled-primary col-span-2 md:col-span-1"
+				on:click={() => handleButton('restart')}
+			>
+				<span><Fa icon={faRefresh} /></span><span>Restart</span>
+			</button>
+
+			{#if timerData.stop_at}
+				<button
+					class="btn variant-filled-tertiary col-span-2 md:col-span-1"
+					on:click={() => handleButton('resume')}
+				>
+					<span><Fa icon={faPlay} /></span><span>Resume</span>
+				</button>
+			{:else}
+				<button
+					class="btn variant-filled-primary col-span-2 md:col-span-1"
+					on:click={() => handleButton('stop')}
+				>
+					<span><Fa icon={faPause} /></span><span>Pause</span>
+				</button>
+			{/if}
+		</div>
+
+		<a class="btn variant-filled-secondary w-full" href={`/manage/${timerData.id}/edit`}>
+			<span><Fa icon={faEdit} /></span><span>Edit</span>
+		</a>
+	{/await}
 </div>

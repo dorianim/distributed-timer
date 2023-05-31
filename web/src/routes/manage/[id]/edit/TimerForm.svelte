@@ -19,13 +19,14 @@
 		faEdit,
 		faCheck
 	} from '@fortawesome/free-solid-svg-icons';
-	import type { Timer } from '../../../types/timer';
-	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from '../../../utils/timer';
-	import type { Segment } from '../../../types/segment';
+	import type { Timer } from 'types/timer';
+	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from 'utils/timer';
+	import type { Segment } from 'types/segment';
 	import SegmentForm from './SegmentForm.svelte';
-	import HelpPopup from '../../../components/HelpPopup.svelte';
+	import HelpPopup from 'components/HelpPopup.svelte';
 	import SegmentInfoBox from './SegmentInfoBox.svelte';
 	import { slide } from 'svelte/transition';
+	import { calculateNewStartAt, type TimerAction } from '../helpers';
 
 	interface TimerFormData {
 		start_at_date: string;
@@ -37,8 +38,6 @@
 			run_before_started: boolean;
 		};
 	}
-
-	type TimerAction = 'save' | 'restart' | 'stop' | 'resume';
 
 	export let timerData: Timer;
 	export let onSubmit: (timerData: Timer) => void;
@@ -100,49 +99,7 @@
 			return formDataStartedAt;
 		}
 
-		const timeInAnySegmentChanged =
-			formSegments.length == timerData.segments.length &&
-			formSegments.some((segment, index) => {
-				return segment.time !== timerData.segments[index].time;
-			});
-
-		if (action === 'save' && !timeInAnySegmentChanged) {
-			return timerData.start_at;
-		}
-
-		let currentTime = new Date().getTime();
-		if (action === 'resume') {
-			currentTime = timerData.stop_at!;
-		}
-
-		const { timeInCurrentRound } = calculateTimeInCurrentRound(timerData, currentTime);
-		const { timeInCurrentSegment, currentSegment } = calculateTimeInCurrentSegment(
-			timeInCurrentRound,
-			timerData.segments
-		);
-		const currentSegmentIndex = timerData.segments.indexOf(currentSegment);
-
-		// find new segment with the same label
-		let newSegment = formSegments.find((segment) => segment.label === currentSegment.label);
-		if (!newSegment && formSegments.length > currentSegmentIndex) {
-			newSegment = formSegments[currentSegmentIndex];
-		} else if (!newSegment) {
-			return new Date().getTime();
-		}
-
-		// calculate time before new segment
-		const newSegmentIndex = formSegments.indexOf(newSegment);
-		let timeBeforeNewSegment = 0;
-		for (let i = 0; i < newSegmentIndex; i++) {
-			timeBeforeNewSegment += formSegments[i].time;
-		}
-
-		// calculate time in new segment
-		const timeInNewSegment =
-			timeInCurrentSegment > newSegment.time ? 0 : newSegment.time - timeInCurrentSegment;
-
-		// calculate new start_at
-		return new Date().getTime() - timeBeforeNewSegment - timeInNewSegment;
+		return calculateNewStartAt(formSegments, timerData, action);
 	};
 
 	const formDataToTimerData = (formData: TimerFormData, action: TimerAction): Timer => {
@@ -188,10 +145,7 @@
 	<strong>Timer sequence:</strong>
 
 	{#each formData.segments as segment, i}
-		<div
-			class="card w-full grid sm:grid-cols-2 md:grid-cols-3 items-center p-[2px]"
-			draggable="true"
-		>
+		<div class="card w-full grid sm:grid-cols-2 md:grid-cols-3 items-center p-[2px]">
 			<SegmentInfoBox
 				{segment}
 				class="rounded-t-md rounded-b-2xl md:rounded-l-md md:rounded-r-2xl justify-center md:justify-start"
@@ -330,34 +284,7 @@
 		</div>
 	</div>
 
-	<strong>Actions:</strong>
-
 	<button class="btn variant-filled-secondary" on:click={handleButtonSubmit('save')}>
 		<span><Fa icon={faSave} /></span><span>Save</span>
 	</button>
-
-	<div class="grid grid-cols-2 gap-3">
-		<button
-			class="btn variant-filled-primary col-span-2 md:col-span-1"
-			on:click={handleButtonSubmit('restart')}
-		>
-			<span><Fa icon={faRefresh} /></span><span>Save and restart</span>
-		</button>
-
-		{#if timerData.stop_at}
-			<button
-				class="btn variant-filled-tertiary col-span-2 md:col-span-1"
-				on:click={handleButtonSubmit('resume')}
-			>
-				<span><Fa icon={faPlay} /></span><span>Save and resume</span>
-			</button>
-		{:else}
-			<button
-				class="btn variant-filled-primary col-span-2 md:col-span-1"
-				on:click={handleButtonSubmit('stop')}
-			>
-				<span><Fa icon={faPause} /></span><span>Save and pause</span>
-			</button>
-		{/if}
-	</div>
 </form>

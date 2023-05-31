@@ -2,7 +2,7 @@
 	import { faRemove } from '@fortawesome/free-solid-svg-icons';
 	import { SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
-	import type { Segment } from '../../../types/segment';
+	import type { Segment } from 'types/segment';
 	import TimeInputField from './TimeInputField.svelte';
 
 	export let segment: Segment;

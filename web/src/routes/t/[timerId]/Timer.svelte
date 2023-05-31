@@ -155,4 +155,8 @@
 	.background-color {
 		background-color: var(--backgroundColor);
 	}
+
+	span {
+		line-height: normal;
+	}
 </style>
