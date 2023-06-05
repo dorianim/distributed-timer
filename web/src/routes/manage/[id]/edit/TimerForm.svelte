@@ -1,26 +1,18 @@
 <script lang="ts">
-	import {
-		modalStore,
-		SlideToggle,
-		type ModalComponent,
-		type ModalSettings
-	} from '@skeletonlabs/skeleton';
+	import { SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
 	import {
 		faTrash,
 		faAdd,
-		faRefresh,
 		faSave,
-		faPause,
-		faPlay,
 		faPauseCircle,
 		faArrowUp,
 		faArrowDown,
 		faEdit,
-		faCheck
+		faCheck,
+		faArrowLeft
 	} from '@fortawesome/free-solid-svg-icons';
 	import type { Timer } from 'types/timer';
-	import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from 'utils/timer';
 	import type { Segment } from 'types/segment';
 	import SegmentForm from './SegmentForm.svelte';
 	import HelpPopup from 'components/HelpPopup.svelte';
@@ -132,6 +124,9 @@
 	formData = timerDataToFormData(timerData);
 </script>
 
+<a href="/manage/{timerData.id}" class="btn variant-glass-primary mb-3"
+	><Fa icon={faArrowLeft} />&nbsp; back to overview</a
+>
 <form class="w-full grid gap-3" on:submit={handleSubmit}>
 	{#if timerData.stop_at}
 		<aside class="alert variant-ghost-warning">
