@@ -32,14 +32,14 @@
 			return timer;
 		});
 	};
+
+	$: timerData = data.timerData;
 </script>
 
 <h2 class="text-center">Manage timer <strong>{timerData.id}</strong></h2>
 
-<div class="w-full m-auto items-center">
-	<div class="w-full h-[500px] px-52 pb-4">
-		<iframe class="w-full h-full card" src={`/t/${timerData.id}`} title="timer preview" />
-	</div>
+<div class="m-auto items-center w-full max-w-screen-lg">
+	<iframe class=" mb-4 w-full aspect-video card" src={`/t/${timerData.id}`} title="timer preview" />
 
 	{#await submitResult}
 		<div class="flex items-center justify-center">

@@ -22,6 +22,7 @@
 	const onSubmit = async (newTimerData: TimerUpdateRequest) => {
 		submitResult = updateTimer(timerData.id, newTimerData, fetch).then((timer: Timer) => {
 			timerData = timer;
+			goto(`/manage/${timerData.id}`);
 			return timer;
 		});
 	};
