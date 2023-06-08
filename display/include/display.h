@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Adafruit_NeoMatrix.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 #include "timer.h"

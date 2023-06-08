@@ -1,12 +1,20 @@
 #include "socket.h"
 
-#include <ArduinoJson.h>
-#include <WebSocketsClient.h>
+#include "esp_websocket_client.h"
 
-namespace socket {
-WebSocketsClient _socket;
+#include <ArduinoJson.h>
+
+static const char *TAG = "WEBSOCKET";
+#define NO_DATA_TIMEOUT_SEC 10
+
+namespace WebSocket {
+
 StaticJsonDocument<1024> _doc;
 String _timerId;
+
+esp_websocket_client_config_t _websocketConfig;
+esp_websocket_client_handle_t _websocketClient;
+
 // --- state ---
 TIME _currentOffset = 0;
 TIME _currentFluctuation = 0;
@@ -164,28 +172,45 @@ void _handleMessage(JsonDocument &doc) {
   }
 }
 
-void _webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
-  switch (type) {
-  case WStype_DISCONNECTED:
-    Serial.printf("[WSc] Disconnected!\n");
-    _socket.beginSSL("timer.itsblue.de", 443, "/api/ws");
-    break;
-  case WStype_CONNECTED: {
-    Serial.printf("[WSc] Connected to url: %s\n", payload);
+static void handleNoDataTimeout(TimerHandle_t xTimer) {
+  ESP_LOGI(TAG, "No data received for %d seconds, signaling shutdown",
+           NO_DATA_TIMEOUT_SEC);
 
+  esp_websocket_client_close(_websocketClient, portTICK_PERIOD_MS * 2000);
+  esp_websocket_client_stop(_websocketClient);
+
+  esp_websocket_client_start(_websocketClient);
+}
+
+static void websocket_event_handler(void *handler_args, esp_event_base_t base,
+                                    int32_t event_id, void *event_data) {
+  esp_websocket_event_data_t *data = (esp_websocket_event_data_t *)event_data;
+  switch (event_id) {
+  case WEBSOCKET_EVENT_CONNECTED: {
+    Serial.println("Connected!");
     StaticJsonDocument<64> doc;
     doc["data"] = _timerId;
     doc["type"] = "Hello";
 
     String output;
     serializeJson(doc, output);
-    // send message to server when Connected
-    _socket.sendTXT(output);
+
+    esp_websocket_client_send_text(_websocketClient, output.c_str(),
+                                   output.length(), portMAX_DELAY);
     break;
   }
-  case WStype_TEXT: {
+  case WEBSOCKET_EVENT_DISCONNECTED: {
+    Serial.println("WEBSOCKET_EVENT_DISCONNECTED");
+    break;
+  }
+  case WEBSOCKET_EVENT_DATA: {
+    if (data->op_code != 1) {
+      return;
+    }
+
     _doc.clear();
-    DeserializationError error = deserializeJson(_doc, payload);
+    DeserializationError error =
+        deserializeJson(_doc, data->data_ptr, data->data_len);
     if (error) {
       Serial.print(F("deserializeJson() failed: "));
       Serial.println(error.c_str());
@@ -193,11 +218,12 @@ void _webSocketEvent(WStype_t type, uint8_t *payload, size_t length) {
     }
 
     _handleMessage(_doc);
-
     break;
   }
-  default:
+  case WEBSOCKET_EVENT_ERROR: {
+    Serial.println("WEBSOCKET_EVENT_ERROR");
     break;
+  }
   }
 }
 
@@ -208,19 +234,34 @@ void init(String timerId) {
 
   _resetTimerData();
 
-  _socket.beginSSL("timer.itsblue.de", 443, "/api/ws");
-  _socket.onEvent(_webSocketEvent);
+  _websocketConfig.host = "timer.itsblue.de";
+  _websocketConfig.path = "/api/ws";
+  _websocketConfig.port = 80;
+  _websocketConfig.disable_auto_reconnect = false;
+  _websocketConfig.disable_pingpong_discon = false;
+  _websocketConfig.keep_alive_enable = true;
+  _websocketConfig.transport = WEBSOCKET_TRANSPORT_OVER_TCP;
+  _websocketConfig.cert_pem = NULL;
+  _websocketConfig.cert_len = 0;
+
+  _websocketClient = esp_websocket_client_init(&_websocketConfig);
+  esp_websocket_register_events(_websocketClient, WEBSOCKET_EVENT_ANY,
+                                websocket_event_handler,
+                                (void *)_websocketClient);
+  esp_websocket_client_start(_websocketClient);
 }
 
 void loop() {
-  _socket.loop();
-  if (millis() - _lastGetTimeSent >= 1000) {
+  if (connected() && millis() - _lastGetTimeSent >= 1000) {
     _lastGetTimeSent = millis();
-    _socket.sendTXT("{\"type\": \"GetTime\"}");
+
+    String payload = "{\"type\": \"GetTime\"}";
+    esp_websocket_client_send_text(_websocketClient, payload.c_str(),
+                                   payload.length(), portMAX_DELAY);
   }
 }
 
-bool connected() { return _socket.isConnected(); }
+bool connected() { return esp_websocket_client_is_connected(_websocketClient); }
 TIME offset() { return _currentOffset; }
 int error() { return _error; }
-} // namespace socket
+} // namespace WebSocket

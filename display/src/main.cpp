@@ -82,16 +82,20 @@ void setup() {
   }
 
   display->printLoading("connecting socket");
-  socket::init(wifi::timerId());
+  WebSocket::init(wifi::timerId());
 }
 
 void refreshDisplay() {
-  if (socket::error() > 0) {
-    display->printError(socket::error());
+  if (WebSocket::error() > 0) {
+    display->printError(WebSocket::error());
     return;
   }
 
-  TIME offset = socket::offset();
+  TIME offset = WebSocket::offset();
+
+  if (!WebSocket::connected()) {
+    return;
+  }
 
   if (offset == 0) {
     display->printLoading("awaiting data");
@@ -107,8 +111,8 @@ void loop() {
     ESP.restart();
   }
 
-  socket::loop();
-  if (socket::error() < 0) {
+  WebSocket::loop();
+  if (WebSocket::error() < 0) {
     ESP.restart();
   }
 
