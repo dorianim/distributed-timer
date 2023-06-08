@@ -137,7 +137,6 @@ void Hub75_Display::loop() {
     _setTextColor(0xff, 0xff, 0xff);
 
     timer::ActiveSegment segment = timer::calculateCurrentSegment(_timeOffset);
-
     String label = segment.label;
     // replace according to
     // https://en.wikipedia.org/wiki/Code_page_437#Character_set
@@ -164,16 +163,16 @@ void Hub75_Display::loop() {
     _matrix->printf("%02d", segment.seconds % 60);
 
     if (timer::timerData()->display_options.clock) {
-      time_t timer =
-          (segment.currentTime / 1000) + ((60 * 60) * wifi::timezoneOffset());
+
+      int timezoneOffset = ((60 * 60) * wifi::timezoneOffset());
+      time_t timer = (segment.currentTime / 1000) + timezoneOffset;
 
       tm *time = localtime(&timer);
       _matrix->setTextSize(1);
       _setTextColor(0xff, 0xff, 0xff);
       _matrix->setCursor(49, 54);
 
-      _matrix->printf("%02d:%02d:%02d", time->tm_hour, time->tm_min,
-                      time->tm_sec);
+      _matrix->printf("%02d:%02d", time->tm_hour, time->tm_min);
     }
 
     break;
