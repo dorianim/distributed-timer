@@ -46,8 +46,8 @@ void Display::printError(int error) {
   this->_errorCode = error;
   this->_state = Error;
 }
-void Display::printTimer(timer::ActiveSegment segment) {
-  this->_segment = segment;
+void Display::printTimer(TIME timeOffset) {
+  this->_timeOffset = timeOffset;
   this->_state = Timer;
 }
 
@@ -133,10 +133,12 @@ void Hub75_Display::loop() {
   }
   case Timer: {
     _matrix->setFont();
-
     _matrix->setTextSize(1);
     _setTextColor(0xff, 0xff, 0xff);
-    String label = _segment.label;
+
+    timer::ActiveSegment segment = timer::calculateCurrentSegment(_timeOffset);
+
+    String label = segment.label;
     // replace according to
     // https://en.wikipedia.org/wiki/Code_page_437#Character_set
     label.replace("ü", "\x81");
@@ -150,26 +152,28 @@ void Hub75_Display::loop() {
     _matrix->setCursor((128 - label.length() * 6) / 2, 3);
     _matrix->print(label);
 
-    _setTextColor(_segment.color);
+    _setTextColor(segment.color);
     _matrix->setTextSize(5);
     _matrix->setTextWrap(false);
     _matrix->setCursor(1, 15);
-    _matrix->printf("%02d", _segment.seconds / 60);
+    _matrix->printf("%02d", segment.seconds / 60);
 
     _matrix->setCursor(51, 15);
     _matrix->print(":");
     _matrix->setCursor(71, 15);
-    _matrix->printf("%02d", _segment.seconds % 60);
+    _matrix->printf("%02d", segment.seconds % 60);
 
     if (timer::timerData()->display_options.clock) {
       time_t timer =
-          (_segment.currentTime / 1000) + ((60 * 60) * wifi::timezoneOffset());
+          (segment.currentTime / 1000) + ((60 * 60) * wifi::timezoneOffset());
+
       tm *time = localtime(&timer);
       _matrix->setTextSize(1);
       _setTextColor(0xff, 0xff, 0xff);
       _matrix->setCursor(49, 54);
 
-      _matrix->printf("%02d:%02d", time->tm_hour, time->tm_min);
+      _matrix->printf("%02d:%02d:%02d", time->tm_hour, time->tm_min,
+                      time->tm_sec);
     }
 
     break;
