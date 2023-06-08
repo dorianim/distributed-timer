@@ -15,7 +15,7 @@ public:
   void printLoading(const char *text);
   void printWifiSetup(String id);
   void printError(int error);
-  void printTimer(timer::ActiveSegment segment);
+  void printTimer(TIME timeOffset);
 
 protected:
   Display();
@@ -28,7 +28,7 @@ protected:
   const char *_loadingText;
   String _wifiId;
   int _errorCode;
-  timer::ActiveSegment _segment;
+  TIME _timeOffset;
 
 private:
   static void __loop(void *arg);
