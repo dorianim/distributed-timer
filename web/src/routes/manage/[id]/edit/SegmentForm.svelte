@@ -26,9 +26,11 @@
 			/>
 		</label>
 
-		<TimeInputField bind:time={segment.time} label="Time (mm:ss):" />
+		<div class="flex flex-row flex-wrap gap-4 w-full">
+			<TimeInputField class="flex-1 min-w-[150px]" bind:time={segment.time} label="Time:" />
 
-		<TimeInputField bind:time={segment.count_to} label="Count to (s):" />
+			<TimeInputField class="flex-1 min-w-[150px]" bind:time={segment.count_to} label="Count to:" />
+		</div>
 
 		<SlideToggle active="bg-primary-500" name="sound" size="sm" bind:checked={segment.sound}
 			>enable sound</SlideToggle

@@ -1,62 +1,70 @@
 <script lang="ts">
 	export let time: number;
-	export let label: string | undefined = undefined;
-	let timeString: string | undefined;
+	export let label: string = '';
+	let clazz: string = '';
+	export { clazz as class };
 
-	const timeToTimeString = (time: number) => {
-		return `${Math.floor(time / (1000 * 60))
-			.toString()
-			.padStart(2, '0')}:${(Math.floor(time / 1000) % 60).toString().padStart(2, '0')}`;
+	let seconds: number;
+	let minutes: number;
+	let hours: number;
+
+	const updateParts = (time: number) => {
+		time = Math.floor(time / 1000);
+		seconds = time % 60;
+		minutes = Math.floor(time / 60) % 60;
+		hours = Math.floor(Math.floor(time / 60) / 60);
 	};
 
-	const timeStringToTime = (timeString: string) => {
-		const time = timeString.split(':');
-		return parseInt(time[0]) * 60 * 1000 + parseInt(time[1]) * 1000;
+	const updateTime = (hours: number, minutes: number, seconds: number) => {
+		time = Math.floor(time / 1000);
+		time = (hours * 60 * 60 + minutes * 60 + seconds) * 1000;
 	};
 
-	const handleTimeFieldChange = () => {
-		if (!timeString) return;
-
-		let tmpTime = timeString;
-		tmpTime = tmpTime.replaceAll(':', '');
-		while (tmpTime.length < 4) {
-			tmpTime = '0' + tmpTime;
-		}
-
-		tmpTime =
-			tmpTime.substring(0, tmpTime.length - 2) + ':' + tmpTime.substring(tmpTime.length - 2);
-
-		while (tmpTime[0] === '0' && tmpTime.length > 5) {
-			tmpTime = tmpTime.substring(1);
-		}
-
-		time = timeStringToTime(tmpTime);
-	};
-
-	$: timeString = timeToTimeString(time);
+	$: updateParts(time);
+	$: updateTime(hours, minutes, seconds);
 </script>
 
-{#if label}
-	<label class="label"
-		>{label}
+<label class="label min-w-[200px] {clazz}"
+	>{label}
+
+	<div class="flex flex-row gap-1 items-center font-bold text-xl">
 		<input
 			class="input variant-form-material"
-			type="text"
-			placeholder="time in milliseconds"
-			pattern="^[0-9]+:[0-9][0-9]$"
-			bind:value={timeString}
-			on:input={handleTimeFieldChange}
+			type="number"
+			placeholder="hours"
+			bind:value={hours}
 			required
 		/>
-	</label>
-{:else}
-	<input
-		class="input variant-form-material"
-		type="text"
-		placeholder="time in milliseconds"
-		pattern="^[0-9]+:[0-9][0-9]$"
-		bind:value={timeString}
-		on:input={handleTimeFieldChange}
-		required
-	/>
-{/if}
+		:
+		<input
+			class="input variant-form-material"
+			type="number"
+			placeholder="minutes"
+			bind:value={minutes}
+			required
+		/>
+		:
+		<input
+			class="input variant-form-material"
+			type="number"
+			placeholder="seconds"
+			bind:value={seconds}
+			required
+		/>
+	</div>
+</label>
+
+<style>
+	/* Chrome, Safari, Edge, Opera */
+	input::-webkit-outer-spin-button,
+	input::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+
+	/* Firefox */
+	input[type='number'] {
+		-moz-appearance: textfield;
+		appearance: textfield;
+	}
+</style>
