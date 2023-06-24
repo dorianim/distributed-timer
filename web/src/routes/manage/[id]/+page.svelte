@@ -2,9 +2,11 @@
 	import Fa from 'svelte-fa';
 	import type { PageData } from './$types';
 	import {
+		faChevronRight,
 		faCircleCheck,
 		faClose,
 		faEdit,
+		faForward,
 		faPause,
 		faPlay,
 		faRefresh
@@ -59,26 +61,21 @@
 			</aside>
 		{/if}
 
-		<div class="grid grid-cols-2 gap-3 pb-4">
-			<button
-				class="btn variant-filled-primary col-span-2 md:col-span-1"
-				on:click={() => handleButton('restart')}
-			>
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-3 pb-4">
+			<button class="btn variant-filled-primary p-4" on:click={() => handleButton('restart')}>
 				<span><Fa icon={faRefresh} /></span><span>Restart</span>
 			</button>
 
+			<button class="btn variant-filled-primary p-4" on:click={() => handleButton('skip')}>
+				<span><Fa icon={faForward} /></span><span>Skip current segment</span>
+			</button>
+
 			{#if timerData.stop_at}
-				<button
-					class="btn variant-filled-tertiary col-span-2 md:col-span-1"
-					on:click={() => handleButton('resume')}
-				>
+				<button class="btn variant-filled-tertiary p-4" on:click={() => handleButton('resume')}>
 					<span><Fa icon={faPlay} /></span><span>Resume</span>
 				</button>
 			{:else}
-				<button
-					class="btn variant-filled-primary col-span-2 md:col-span-1"
-					on:click={() => handleButton('stop')}
-				>
+				<button class="btn variant-filled-primary p-4" on:click={() => handleButton('stop')}>
 					<span><Fa icon={faPause} /></span><span>Pause</span>
 				</button>
 			{/if}

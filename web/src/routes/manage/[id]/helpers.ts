@@ -6,7 +6,7 @@ import type { Segment } from 'types/segment';
 import type { Timer, TimerUpdateRequest } from 'types/timer';
 import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from 'utils/timer';
 
-export type TimerAction = 'save' | 'restart' | 'stop' | 'resume';
+export type TimerAction = 'save' | 'restart' | 'stop' | 'resume' | 'skip';
 
 /**
  * This function calculates the new start_at
@@ -49,7 +49,11 @@ export const calculateNewStartAt = (
 	const currentSegmentIndex = oldTimerData.segments.indexOf(currentSegment);
 
 	// find new segment with the same label
-	let newSegment = newSegments.find((segment) => segment.label === currentSegment.label);
+	let newSegment = newSegments.find(
+		(segment) =>
+			segment.label === currentSegment.label &&
+			(timeInAnySegmentChanged || segment.time === currentSegment.time)
+	);
 	if (!newSegment && newSegments.length > currentSegmentIndex) {
 		newSegment = newSegments[currentSegmentIndex];
 	} else if (!newSegment) {
@@ -61,6 +65,11 @@ export const calculateNewStartAt = (
 	let timeBeforeNewSegment = 0;
 	for (let i = 0; i < newSegmentIndex; i++) {
 		timeBeforeNewSegment += newSegments[i].time;
+	}
+
+	if (action === 'skip') {
+		console.log({ timeBeforeNewSegment, newSegmentIndex, time: newSegments[newSegmentIndex] });
+		return new Date().getTime() - timeBeforeNewSegment - newSegments[newSegmentIndex].time;
 	}
 
 	// calculate time in new segment
