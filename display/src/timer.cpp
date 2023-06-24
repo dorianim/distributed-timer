@@ -20,11 +20,11 @@ ActiveSegment calculateCurrentSegment(TIME timeOffset) {
     return {0, 0xfff, "", currentTime};
   }
 
-  if (_timerData.stop_at != 0 && currentTime > _timerData.stop_at) {
-    currentTime = _timerData.stop_at;
-  }
-
   long elapsedTime = currentTime - _timerData.start_at;
+
+  if (_timerData.stop_at != 0 && currentTime > _timerData.stop_at) {
+    elapsedTime = _timerData.stop_at - _timerData.start_at;
+  }
 
   long totalTimePerRound = 0;
   for (int i = 0; i < 10 && _timerData.segments[i].valid; i++) {

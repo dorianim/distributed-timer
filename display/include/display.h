@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Adafruit_NeoMatrix.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 #include "timer.h"
@@ -15,7 +14,7 @@ public:
   void printLoading(const char *text);
   void printWifiSetup(String id);
   void printError(int error);
-  void printTimer(timer::ActiveSegment segment);
+  void printTimer(TIME timeOffset);
 
 protected:
   Display();
@@ -28,7 +27,7 @@ protected:
   const char *_loadingText;
   String _wifiId;
   int _errorCode;
-  timer::ActiveSegment _segment;
+  TIME _timeOffset;
 
 private:
   static void __loop(void *arg);
@@ -42,6 +41,7 @@ public:
   virtual void loop() override;
 
 private:
+  uint16_t _packColor(uint8_t r, uint8_t g, uint8_t b);
   void _setTextColor(uint32_t c);
   void _setTextColor(uint8_t r, uint8_t g, uint8_t b);
   void _printBrandAnimationLetter(char letter, uint8_t &brightness,

@@ -5,7 +5,7 @@
 #include "display.h"
 #include "timer.h"
 
-namespace socket {
+namespace WebSocket {
 
 void init(String timerId);
 void loop();
@@ -13,4 +13,4 @@ void loop();
 bool connected();
 TIME offset();
 int error();
-} // namespace socket
+} // namespace WebSocket

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Adafruit_NeoMatrix.h>
-
 #include "display.h"
 
 namespace wifi {

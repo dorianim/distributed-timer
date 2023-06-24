@@ -94,6 +94,7 @@
 	const update = () => {
 		currentSegment = calculateCurrentSegment();
 		const { timerText, label, color, seconds } = currentSegment;
+		console.log(new Date(currentSegment.currentTime).toLocaleTimeString());
 
 		if (timerSpan !== null && timerSpan.innerText !== timerText) {
 			timerSpan.innerText = timerText;
@@ -115,7 +116,7 @@
 	onMount(() => {
 		setInterval(() => {
 			update();
-		}, 100);
+		}, 10);
 	});
 
 	$: {

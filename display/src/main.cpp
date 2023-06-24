@@ -37,6 +37,8 @@
 #define OE_PIN 15
 #define CLK_PIN 22
 
+#define WIFI_RESET_PIN 21
+
 HUB75_I2S_CFG::i2s_pins _pins = {R1_PIN, G1_PIN,  B1_PIN, R2_PIN, G2_PIN,
                                  B2_PIN, A_PIN,   B_PIN,  C_PIN,  D_PIN,
                                  E_PIN,  LAT_PIN, OE_PIN, CLK_PIN};
@@ -58,15 +60,15 @@ void setup() {
   mxconfig.setPixelColorDepthBits(4);
   display = Display::from(new MatrixPanel_I2S_DMA(mxconfig));
 
-  pinMode(33, INPUT_PULLUP);
+  pinMode(WIFI_RESET_PIN, INPUT_PULLUP);
 
-  if (digitalRead(21) == LOW) {
+  if (digitalRead(WIFI_RESET_PIN) == LOW) {
     display->printLoading("reset!");
     wifi::reset();
     delay(3000);
 
     display->printLoading("release button!");
-    while (digitalRead(33) == LOW) {
+    while (digitalRead(WIFI_RESET_PIN) == LOW) {
       delay(100);
     }
 
@@ -81,34 +83,37 @@ void setup() {
   }
 
   display->printLoading("connecting socket");
-  socket::init(wifi::timerId());
+  WebSocket::init(wifi::timerId());
 }
 
 void refreshDisplay() {
-  if (socket::error() > 0) {
-    display->printError(socket::error());
+  if (WebSocket::error() > 0) {
+    display->printError(WebSocket::error());
     return;
   }
 
-  timer::ActiveSegment currentSegment =
-      timer::calculateCurrentSegment(socket::offset());
+  TIME offset = WebSocket::offset();
 
-  if (currentSegment.currentTime == 0) {
+  if (!WebSocket::connected()) {
+    return;
+  }
+
+  if (offset == 0) {
     display->printLoading("awaiting data");
     return;
   }
 
-  display->printTimer(currentSegment);
+  display->printTimer(offset);
 }
 
 void loop() {
   wifi::loop();
   if (!wifi::connected()) {
-    ESP.restart();
+    // ESP.restart();
   }
 
-  socket::loop();
-  if (socket::error() < 0) {
+  WebSocket::loop();
+  if (WebSocket::error() < 0) {
     ESP.restart();
   }
 
