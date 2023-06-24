@@ -22,6 +22,7 @@
 	let soundEnabled: boolean;
 	let timerData: TimerType | undefined;
 	let lastGetTimeSent = 0;
+	let lastGetTimeReceived = 0;
 	let socket: WebSocket | undefined;
 
 	const pushValueAndCaluclateAverage = (values: number[], newValue: number) => {
@@ -108,9 +109,10 @@
 					timerData = timer;
 					break;
 				case 'Timestamp':
-					const now = performance.now();
-					const getTimeRoundTrip = now - lastGetTimeSent;
-					let newOffset = data.data + getTimeRoundTrip / 2 - now;
+					const lastGetTimeReceived = performance.now();
+					const getTimeRoundTrip = lastGetTimeReceived - lastGetTimeSent;
+					console.log('roundtrip', getTimeRoundTrip);
+					let newOffset = data.data + getTimeRoundTrip / 2 - lastGetTimeReceived;
 					handleNewOffset(newOffset);
 					break;
 				case 'Error':
@@ -124,6 +126,18 @@
 			socket?.send(JSON.stringify({ data: data.params.timerId, type: 'Hello' }));
 
 			setInterval(() => {
+				let lastGetTimeReceivedOneSecondAgo =
+					lastGetTimeReceived > lastGetTimeSent && performance.now() - lastGetTimeReceived >= 1000;
+				let lastGetTimeReceivedTimeout =
+					lastGetTimeReceived < lastGetTimeSent && performance.now() - lastGetTimeSent >= 10000;
+
+				if (
+					lastGetTimeSent !== 0 &&
+					!lastGetTimeReceivedOneSecondAgo &&
+					!lastGetTimeReceivedTimeout
+				) {
+					return;
+				}
 				lastGetTimeSent = performance.now();
 				socket?.send(JSON.stringify({ type: 'GetTime' }));
 			}, 1000);

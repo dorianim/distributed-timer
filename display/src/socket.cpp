@@ -22,6 +22,7 @@ TIME _latestOffsets[10] = {0};
 TIME _latestFluctuations[10] = {0};
 
 unsigned long _lastGetTimeSent = 0;
+unsigned long _lastGetTimeReceived = 0;
 int _error = 0;
 timer::TimerData *_timerData;
 
@@ -162,10 +163,13 @@ void _handleMessage(JsonDocument &doc) {
     JsonObject data = doc["data"];
     _loadTimerData(data);
   } else if (type == "Timestamp") {
-    unsigned long now = millis();
-    unsigned long getTimeRoundtrip = now - _lastGetTimeSent;
+    _lastGetTimeReceived = millis();
+    unsigned long getTimeRoundtrip = _lastGetTimeReceived - _lastGetTimeSent;
+    Serial.printf("Roundtrip: %dms\n", getTimeRoundtrip);
+
     long long serverTime = doc["data"];
-    TIME timeOffset = serverTime - now + getTimeRoundtrip / 2;
+    TIME timeOffset =
+        serverTime + (getTimeRoundtrip / 2) - _lastGetTimeReceived;
     _handleNewOffset(timeOffset);
   } else if (type == "Error") {
     _error = doc["data"][0];
@@ -238,8 +242,8 @@ void init(String timerId) {
   _websocketConfig.path = "/api/ws";
   _websocketConfig.port = 80;
   _websocketConfig.disable_auto_reconnect = false;
-  _websocketConfig.disable_pingpong_discon = false;
-  _websocketConfig.keep_alive_enable = true;
+  _websocketConfig.disable_pingpong_discon = true;
+  _websocketConfig.keep_alive_enable = false;
   _websocketConfig.transport = WEBSOCKET_TRANSPORT_OVER_TCP;
   _websocketConfig.cert_pem = NULL;
   _websocketConfig.cert_len = 0;
@@ -252,7 +256,15 @@ void init(String timerId) {
 }
 
 void loop() {
-  if (connected() && millis() - _lastGetTimeSent >= 1000) {
+  bool lastGetTimeReceivedOneSecondAgo =
+      _lastGetTimeReceived > _lastGetTimeSent &&
+      millis() - _lastGetTimeReceived >= 1000;
+  bool lastGetTimeReceivedTimeout = _lastGetTimeReceived < _lastGetTimeSent &&
+                                    millis() - _lastGetTimeSent >= 10000;
+
+  if (connected() &&
+      (_lastGetTimeSent == 0 || lastGetTimeReceivedOneSecondAgo ||
+       lastGetTimeReceivedTimeout)) {
     _lastGetTimeSent = millis();
 
     String payload = "{\"type\": \"GetTime\"}";

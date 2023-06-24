@@ -1,6 +1,7 @@
 #include "WiFi.h"
 
 #include "display.h"
+#include "socket.h"
 #include "time.h"
 #include "wifi.h"
 
@@ -72,6 +73,9 @@ Hub75_Display::Hub75_Display(MatrixPanel_I2S_DMA *matrix)
 }
 
 void Hub75_Display::setup() {}
+
+uint8_t wifiIcon[] PROGMEM = {B01111110, B10000001, B00111100,
+                              B01000010, B00011000, B00011000};
 
 void Hub75_Display::loop() {
   _matrix->clearScreen();
@@ -172,15 +176,21 @@ void Hub75_Display::loop() {
       _setTextColor(0xff, 0xff, 0xff);
       _matrix->setCursor(49, 54);
 
-      _matrix->printf("%02d:%02d", time->tm_hour, time->tm_min);
+      _matrix->printf("%02d:%02d:%02d", time->tm_hour, time->tm_min,
+                      time->tm_sec);
     }
 
     break;
   }
   }
 
-  // if ((millis() / 1000) % 2)
-  //   _matrix->drawPixel(0, 0, _matrix->color333(0xff, 0xff, 0xff));
+  if (!wifi::connected()) {
+    _matrix->drawBitmap(118, 2, (uint8_t *)&wifiIcon, 8, 6,
+                        this->_packColor(255, 0, 0), 0);
+  } else if (!WebSocket::connected()) {
+    _matrix->drawBitmap(118, 2, (uint8_t *)&wifiIcon, 8, 6,
+                        this->_packColor(255, 150, 0), 0);
+  }
 
   _matrix->flipDMABuffer();
   vTaskDelay(10);
@@ -204,12 +214,15 @@ void Hub75_Display::_printBrandAnimationLetter(char letter, uint8_t &brightness,
   }
 }
 
+uint16_t Hub75_Display::_packColor(uint8_t r, uint8_t g, uint8_t b) {
+  return ((uint16_t)(r & 0xF8) << 8) | ((uint16_t)(g & 0xFC) << 3) | (b >> 3);
+}
+
 void Hub75_Display::_setTextColor(uint32_t c) {
   _setTextColor(c >> 16, c >> 8, c);
 }
 void Hub75_Display::_setTextColor(uint8_t r, uint8_t g, uint8_t b) {
-  uint16_t packed =
-      ((uint16_t)(r & 0xF8) << 8) | ((uint16_t)(g & 0xFC) << 3) | (b >> 3);
+  uint16_t packed = this->_packColor(r, g, b);
 
   _matrix->setTextColor(packed);
 }

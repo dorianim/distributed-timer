@@ -108,7 +108,7 @@ void refreshDisplay() {
 void loop() {
   wifi::loop();
   if (!wifi::connected()) {
-    ESP.restart();
+    // ESP.restart();
   }
 
   WebSocket::loop();

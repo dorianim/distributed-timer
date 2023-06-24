@@ -41,6 +41,7 @@ public:
   virtual void loop() override;
 
 private:
+  uint16_t _packColor(uint8_t r, uint8_t g, uint8_t b);
   void _setTextColor(uint32_t c);
   void _setTextColor(uint8_t r, uint8_t g, uint8_t b);
   void _printBrandAnimationLetter(char letter, uint8_t &brightness,
