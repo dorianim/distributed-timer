@@ -47,7 +47,7 @@ function calculateTimeInCurrentRound(
 
 	if (!timerData.repeat && !stopped && elapsedTime > totalTimePerRound) {
 		return {
-			timeInCurrentRound: 0,
+			timeInCurrentRound: totalTimePerRound,
 			state: 'finished'
 		};
 	}

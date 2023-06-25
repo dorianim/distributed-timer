@@ -64,16 +64,6 @@
 			};
 		}
 
-		if (state == 'finished') {
-			return {
-				timerText: getTimerText(0),
-				label: segments[segments.length - 1].label,
-				seconds: 0,
-				sound: false,
-				currentTime: currentTime
-			};
-		}
-
 		const { timeInCurrentSegment, currentSegment } = calculateTimeInCurrentSegment(
 			timeInCurrentRound,
 			timerData.segments
@@ -94,9 +84,8 @@
 	const update = () => {
 		currentSegment = calculateCurrentSegment();
 		const { timerText, label, color, seconds } = currentSegment;
-		console.log(new Date(currentSegment.currentTime).toLocaleTimeString());
 
-		if (timerSpan !== null && timerSpan.innerText !== timerText) {
+		if (timerSpan !== null) {
 			timerSpan.innerText = timerText;
 			labelSpan.innerText = label;
 			backgroundDiv.style.setProperty(
