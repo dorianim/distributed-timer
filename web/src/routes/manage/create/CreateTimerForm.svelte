@@ -9,7 +9,7 @@
 
 	const templates = [
 		{
-			name: 'Boulder 4min + 15s',
+			name: 'Boulder quali 4min + 15s',
 			repeat: true,
 			segments: [
 				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
@@ -18,15 +18,16 @@
 			]
 		},
 		{
-			name: 'Boulder 4min',
+			name: 'Boulder quali 5min + 15s',
 			repeat: true,
 			segments: [
-				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
-				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 }
+				{ label: 'Boulder', time: 290000, sound: true, color: '#26A269', count_to: 11000 },
+				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
+				{ label: 'Change', time: 14000, sound: true, color: '#E66100', count_to: 1000 }
 			]
 		},
 		{
-			name: 'Boulder 4min + wait',
+			name: 'Boulder final 4min + wait',
 			repeat: false,
 			segments: [
 				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
