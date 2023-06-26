@@ -9,29 +9,30 @@
 
 	const templates = [
 		{
-			name: 'Boulder 4min + 15s',
+			name: 'Boulder quali 4min + 15s',
+			repeat: true,
 			segments: [
-				{ label: 'Boulder', time: 231000, sound: true, color: '#26A269', count_to: 10000 },
-				{ label: 'Boulder', time: 10000, sound: true, color: '#A51D2D', count_to: 0 },
+				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
+				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
 				{ label: 'Change', time: 14000, sound: true, color: '#E66100', count_to: 1000 }
 			]
 		},
 		{
-			name: 'Boulder 4min',
+			name: 'Boulder quali 5min + 15s',
+			repeat: true,
 			segments: [
-				{ label: 'Boulder', time: 231000, sound: true, color: '#26A269', count_to: 10000 },
-				{ label: 'Boulder', time: 10000, sound: true, color: '#A51D2D', count_to: 0 }
+				{ label: 'Boulder', time: 290000, sound: true, color: '#26A269', count_to: 11000 },
+				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
+				{ label: 'Change', time: 14000, sound: true, color: '#E66100', count_to: 1000 }
 			]
 		},
 		{
-			name: 'Simple',
+			name: 'Boulder final 4min + wait',
+			repeat: false,
 			segments: [
-				{
-					label: 'Work',
-					time: 4 * 60 * 1000,
-					count_to: 1,
-					sound: true
-				}
+				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
+				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
+				{ label: 'Wait', time: 1000, sound: true, color: '#1C71D8', count_to: 240000 }
 			]
 		}
 	];
@@ -51,7 +52,7 @@
 				id: values.name,
 				password: values.password,
 				start_at: new Date().getTime(),
-				repeat: true,
+				repeat: templates[values.segments].repeat,
 				segments: templates[values.segments].segments
 			};
 			onSubmit(formData);

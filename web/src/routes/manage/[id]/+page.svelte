@@ -1,86 +1,96 @@
 <script lang="ts">
-	import { ProgressRadial, SlideToggle } from '@skeletonlabs/skeleton';
-	import { get } from 'svelte/store';
-	import { API_URL } from '../../../stores';
-	import type { Timer, TimerUpdateRequest } from '../../../types/timer';
-	import type { PageData } from './$types';
-	import TimerForm from './TimerForm.svelte';
 	import Fa from 'svelte-fa';
-	import { faClose, faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
-	import { goto } from '$app/navigation';
-	import { browser } from '$app/environment';
+	import type { PageData } from './$types';
+	import {
+		faChevronRight,
+		faCircleCheck,
+		faClose,
+		faEdit,
+		faForward,
+		faPause,
+		faPlay,
+		faRefresh
+	} from '@fortawesome/free-solid-svg-icons';
+	import {
+		updateTimer,
+		calculateStartTimeAfterResume,
+		calculateStartTimeAfterSkip
+	} from './helpers';
+	import type { Timer } from 'types/timer';
+	import { ProgressRadial } from '@skeletonlabs/skeleton';
 
 	export let data: PageData;
 	let { timerData } = data;
 	let submitResult: Promise<Timer | void> = Promise.resolve();
 
-	$: {
-		if (browser && !localStorage.getItem('token')) goto('/manage/login');
-	}
+	const _updateTimer = (start_at?: number, stop_at?: number) => {
+		if (!start_at) {
+			start_at = timerData.start_at;
+		}
 
-	const onSubmit = async (newTimerData: TimerUpdateRequest) => {
-		submitResult = fetch(`${get(API_URL)}/timer/${data.params.id}`, {
-			method: 'PUT',
-			body: JSON.stringify(newTimerData),
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${localStorage.getItem('token')}`
-			}
-		})
-			.then((res) => {
-				if (!res.ok) {
-					throw new Error(res.statusText);
-				}
-				return res.json();
-			})
-			.then((timer: Timer) => {
-				timerData = timer;
-				return timer;
-			});
+		const newTimer = {
+			...timerData,
+			start_at: start_at,
+			stop_at: stop_at
+		};
+
+		submitResult = updateTimer(timerData.id, newTimer, data.fetch).then((timer: Timer) => {
+			timerData = timer;
+			return timer;
+		});
 	};
+
+	const restartTimer = () => {
+		_updateTimer(new Date().getTime());
+	};
+
+	const stopTimer = () => {
+		_updateTimer(undefined, new Date().getTime());
+	};
+
+	const resumeTimer = () => {
+		_updateTimer(calculateStartTimeAfterResume(timerData), undefined);
+	};
+
+	const skipCurrentSegment = () => {
+		_updateTimer(calculateStartTimeAfterSkip(timerData));
+	};
+
+	$: timerData = data.timerData;
 </script>
 
 <h2 class="text-center">Manage timer <strong>{timerData.id}</strong></h2>
 
-<div class=" m-auto w-full items-center">
+<div class="m-auto items-center w-full max-w-screen-lg">
+	<iframe class=" mb-4 w-full aspect-video card" src={`/t/${timerData.id}`} title="timer preview" />
+
 	{#await submitResult}
 		<div class="flex items-center justify-center">
 			<ProgressRadial class="w-10" />
 		</div>
-	{:then result}
-		{#if result}
-			<aside class="alert variant-ghost-success">
-				<Fa icon={faCircleCheck} class="text-2xl" />
-				<h3 class="alert-message">Success</h3>
-				<button
-					class="btn-icon"
-					on:click={() => {
-						submitResult = Promise.resolve();
-					}}><Fa icon={faClose} /></button
-				>
-			</aside>
-		{/if}
-		<TimerForm {timerData} {onSubmit} />
-	{:catch error}
-		<div class="alert variant-ghost-error">
-			<Fa icon={faCircleExclamation} class="text-2xl" />
-			<div class="alert-message">
-				<h3>Error</h3>
-				<p>{error}</p>
-			</div>
-			<button
-				class="btn-icon"
-				on:click={() => {
-					submitResult = Promise.resolve();
-				}}><Fa icon={faClose} /></button
-			>
-		</div>
-		<TimerForm {timerData} {onSubmit} />
-	{/await}
-</div>
+	{:then}
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-3 pb-4">
+			<button class="btn variant-filled-primary p-4" on:click={restartTimer}>
+				<span><Fa icon={faRefresh} /></span><span>Restart</span>
+			</button>
 
-<div class="m-auto text-center">
-	Alternatively, you can <a href="/">view an existing timer</a>,
-	<a href="/manage/login">manage a diffrent existing timer</a> or
-	<a href="/manage/create">create a new timer</a>
+			<button class="btn variant-filled-primary p-4" on:click={skipCurrentSegment}>
+				<span><Fa icon={faForward} /></span><span>Skip current segment</span>
+			</button>
+
+			{#if timerData.stop_at}
+				<button class="btn variant-filled-tertiary p-4" on:click={resumeTimer}>
+					<span><Fa icon={faPlay} /></span><span>Resume</span>
+				</button>
+			{:else}
+				<button class="btn variant-filled-primary p-4" on:click={stopTimer}>
+					<span><Fa icon={faPause} /></span><span>Pause</span>
+				</button>
+			{/if}
+		</div>
+
+		<a class="btn variant-filled-secondary w-full" href={`/manage/${timerData.id}/edit`}>
+			<span><Fa icon={faEdit} /></span><span>Edit</span>
+		</a>
+	{/await}
 </div>
