@@ -18,7 +18,6 @@
 	import HelpPopup from 'components/HelpPopup.svelte';
 	import SegmentInfoBox from './SegmentInfoBox.svelte';
 	import { slide } from 'svelte/transition';
-	import { calculateNewStartAt, type TimerAction } from '../helpers';
 
 	interface TimerFormData {
 		start_at_date: string;
@@ -37,15 +36,8 @@
 	let formData: TimerFormData;
 	let editingSegment: number | undefined = undefined;
 
-	const handleSubmit = (e: Event) => {
-		e.preventDefault();
-	};
-
-	const handleButtonSubmit = (action: TimerAction) => {
-		console.log('button submit', action);
-		return () => {
-			onSubmit(formDataToTimerData(formData, action));
-		};
+	const handleSubmit = () => {
+		onSubmit(formDataToTimerData(formData));
 	};
 
 	const timerDataToFormData = (timerData: Timer): TimerFormData => {
@@ -66,42 +58,9 @@
 		};
 	};
 
-	/**
-	 * This function calculates the new start_at
-	 * It behaves differently depending on the action:
-	 * - save: if the segments haven't changed, the start_at time is not changed
-	 *         if the segments have changed, the start_at time is adjusted to make sure the timer is in the same state as before
-	 * - restart: the start_at time is set to the current time
-	 * - stop: the start_at time is not changed
-	 * - resume: the start_at time is adjusted to make sure the timer is in the same state as before
-	 */
-	const calculateStartAt = (
-		formData: TimerFormData,
-		formSegments: Segment[],
-		action: TimerAction
-	): number => {
-		if (action === 'restart') {
-			return new Date().getTime();
-		}
-
-		const formDataStartedAt = new Date(
-			`${formData.start_at_date} ${formData.start_at_time}`
-		).getTime();
-		if (formDataStartedAt > new Date().getTime()) {
-			return formDataStartedAt;
-		}
-
-		return calculateNewStartAt(formSegments, timerData, action);
-	};
-
-	const formDataToTimerData = (formData: TimerFormData, action: TimerAction): Timer => {
-		const start_at = calculateStartAt(formData, formData.segments, action);
-		const stop_at = action === 'stop' ? new Date().getTime() : undefined;
-
+	const formDataToTimerData = (formData: TimerFormData): Timer => {
 		return {
-			id: timerData.id,
-			start_at: start_at,
-			stop_at: stop_at,
+			...timerData,
 			repeat: formData.repeat,
 			segments: formData.segments,
 			display_options: {
@@ -127,7 +86,7 @@
 <a href="/manage/{timerData.id}" class="btn variant-glass-primary mb-3"
 	><Fa icon={faArrowLeft} />&nbsp; back to overview</a
 >
-<form class="w-full grid gap-3" on:submit={handleSubmit}>
+<form class="w-full grid gap-3" on:submit|preventDefault>
 	{#if timerData.stop_at}
 		<aside class="alert variant-ghost-warning">
 			<Fa icon={faPauseCircle} class="text-2xl" />
@@ -252,7 +211,17 @@
 		</div>
 	</SlideToggle>
 
-	<strong>When to start the timer:</strong>
+	<div class="flex items-center gap-2">
+		<strong>When to start the timer:</strong>
+		<HelpPopup>
+			The time when the
+			{#if formData.repeat}
+				first iteration of the timer will begin
+			{:else}
+				the timer will be started
+			{/if}. The start time will be modified if you restart, pause, resume or skip a segment.
+		</HelpPopup>
+	</div>
 
 	<div class="grid grid-cols-2 gap-3">
 		<input
@@ -270,16 +239,14 @@
 			bind:value={formData.start_at_time}
 			required
 		/>
-		<div class="col-span-2 flex items-center gap-2">
-			<p>This field will only be used if the selected time is in the future.</p>
-			<HelpPopup>
-				... otherwise, the field will be adjusted to preserve the current state of the timer or
-				restart it.
-			</HelpPopup>
-		</div>
 	</div>
 
-	<button class="btn variant-filled-secondary" on:click={handleButtonSubmit('save')}>
+	<p>
+		<b class="text-[#F59D30]">Warning:</b> if you have modified any times in the sequence, the
+		current time on the timer <b class="text-[#E01B24]">WILL CHANGE</b> as soon as you save!
+	</p>
+
+	<button class="btn variant-filled-secondary" on:click={handleSubmit}>
 		<span><Fa icon={faSave} /></span><span>Save</span>
 	</button>
 </form>

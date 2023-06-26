@@ -11,7 +11,11 @@
 		faPlay,
 		faRefresh
 	} from '@fortawesome/free-solid-svg-icons';
-	import { calculateNewStartAt, updateTimer, type TimerAction } from './helpers';
+	import {
+		updateTimer,
+		calculateStartTimeAfterResume,
+		calculateStartTimeAfterSkip
+	} from './helpers';
 	import type { Timer } from 'types/timer';
 	import { ProgressRadial } from '@skeletonlabs/skeleton';
 
@@ -19,10 +23,11 @@
 	let { timerData } = data;
 	let submitResult: Promise<Timer | void> = Promise.resolve();
 
-	const handleButton = (action: TimerAction) => {
-		console.log('button submit', action);
-		const start_at = calculateNewStartAt(timerData.segments, timerData, action);
-		const stop_at = action === 'stop' ? new Date().getTime() : undefined;
+	const _updateTimer = (start_at?: number, stop_at?: number) => {
+		if (!start_at) {
+			start_at = timerData.start_at;
+		}
+
 		const newTimer = {
 			...timerData,
 			start_at: start_at,
@@ -33,6 +38,22 @@
 			timerData = timer;
 			return timer;
 		});
+	};
+
+	const restartTimer = () => {
+		_updateTimer(new Date().getTime());
+	};
+
+	const stopTimer = () => {
+		_updateTimer(undefined, new Date().getTime());
+	};
+
+	const resumeTimer = () => {
+		_updateTimer(calculateStartTimeAfterResume(timerData), undefined);
+	};
+
+	const skipCurrentSegment = () => {
+		_updateTimer(calculateStartTimeAfterSkip(timerData));
 	};
 
 	$: timerData = data.timerData;
@@ -47,35 +68,22 @@
 		<div class="flex items-center justify-center">
 			<ProgressRadial class="w-10" />
 		</div>
-	{:then result}
-		{#if result}
-			<aside class="alert variant-ghost-success">
-				<Fa icon={faCircleCheck} class="text-2xl" />
-				<h3 class="alert-message">Success</h3>
-				<button
-					class="btn-icon"
-					on:click={() => {
-						submitResult = Promise.resolve();
-					}}><Fa icon={faClose} /></button
-				>
-			</aside>
-		{/if}
-
+	{:then}
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-3 pb-4">
-			<button class="btn variant-filled-primary p-4" on:click={() => handleButton('restart')}>
+			<button class="btn variant-filled-primary p-4" on:click={restartTimer}>
 				<span><Fa icon={faRefresh} /></span><span>Restart</span>
 			</button>
 
-			<button class="btn variant-filled-primary p-4" on:click={() => handleButton('skip')}>
+			<button class="btn variant-filled-primary p-4" on:click={skipCurrentSegment}>
 				<span><Fa icon={faForward} /></span><span>Skip current segment</span>
 			</button>
 
 			{#if timerData.stop_at}
-				<button class="btn variant-filled-tertiary p-4" on:click={() => handleButton('resume')}>
+				<button class="btn variant-filled-tertiary p-4" on:click={resumeTimer}>
 					<span><Fa icon={faPlay} /></span><span>Resume</span>
 				</button>
 			{:else}
-				<button class="btn variant-filled-primary p-4" on:click={() => handleButton('stop')}>
+				<button class="btn variant-filled-primary p-4" on:click={stopTimer}>
 					<span><Fa icon={faPause} /></span><span>Pause</span>
 				</button>
 			{/if}
