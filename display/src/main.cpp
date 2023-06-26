@@ -65,14 +65,13 @@ void setup() {
   if (digitalRead(WIFI_RESET_PIN) == LOW) {
     display->printLoading("reset!");
     wifi::reset();
-    delay(3000);
+    delay(5000);
 
     display->printLoading("release button!");
     while (digitalRead(WIFI_RESET_PIN) == LOW) {
       delay(100);
     }
 
-    delay(100);
     ESP.restart();
   }
 
