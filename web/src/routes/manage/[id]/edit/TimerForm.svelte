@@ -61,6 +61,7 @@
 	const formDataToTimerData = (formData: TimerFormData): Timer => {
 		return {
 			...timerData,
+			start_at: new Date(`${formData.start_at_date} ${formData.start_at_time}`).getTime(),
 			repeat: formData.repeat,
 			segments: formData.segments,
 			display_options: {
