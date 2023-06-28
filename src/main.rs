@@ -1,6 +1,4 @@
 use axum::{http::Request, response::Response, Router};
-use color::Color;
-use serde::{Deserialize, Serialize};
 use tower_http::catch_panic::CatchPanicLayer;
 
 use std::sync::Arc;
@@ -10,74 +8,13 @@ use tower_http::trace::TraceLayer;
 use tracing::Span;
 mod color;
 mod routes;
+mod models;
+
+use models::*;
 
 use tokio::sync::broadcast;
 
-fn default_zero() -> u32 {
-    0
-}
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Segment {
-    label: String,
-    time: u32,
-    sound: bool,
-    color: Option<Color>,
-    #[serde(default = "default_zero")]
-    count_to: u32,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-enum PreStartBehaviour {
-    ShowZero,
-    RunNormally,
-}
-
-impl Default for PreStartBehaviour {
-    fn default() -> Self {
-        PreStartBehaviour::ShowZero
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct DisplayOptions {
-    #[serde(default)]
-    clock: bool,
-    #[serde(default)]
-    pre_start_behaviour: PreStartBehaviour,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Timer {
-    // Return after TimerRequest
-    pub segments: Vec<Segment>,
-    pub repeat: bool,
-    pub display_options: Option<DisplayOptions>,
-    pub start_at: u64,
-    pub stop_at: Option<u64>,
-    pub password: String,
-    pub id: String, // 5 random chars
-}
-
-#[derive(Serialize, Clone)]
-#[serde(tag = "type", content = "data")]
-enum DonationMethod {
-    PayPal(String),
-}
-
-#[derive(Serialize, Clone)]
-struct InstanceProperties {
-    demo: bool,
-    donation: Option<Vec<DonationMethod>>,
-}
-
-type SharedState = Arc<AppState>;
-pub struct AppState {
-    redis: redis::aio::ConnectionManager,
-    jwt_key: String,
-    instance_properties: InstanceProperties,
-    redis_task_rx: broadcast::Receiver<Timer>,
-}
 
 #[tokio::main]
 async fn main() {

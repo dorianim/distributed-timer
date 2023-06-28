@@ -1,5 +1,3 @@
-use crate::{DisplayOptions, SharedState};
-use crate::{Segment, Timer};
 use axum::extract::{Path, State};
 use axum::http::{Request, StatusCode};
 use axum::middleware::{self, Next};
@@ -15,7 +13,6 @@ use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, 
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
 use std::str;
 
 use argon2::{
@@ -23,72 +20,7 @@ use argon2::{
     Argon2,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TimerResponse {
-    pub segments: Vec<Segment>,
-    pub id: String,
-    pub repeat: bool,
-    pub display_options: DisplayOptions,
-    pub start_at: u64,
-    pub stop_at: Option<u64>,
-}
-
-impl Into<TimerResponse> for Timer {
-    fn into(self) -> TimerResponse {
-        TimerResponse {
-            segments: self.segments,
-            id: self.id,
-            repeat: self.repeat,
-            display_options: self.display_options.unwrap_or(DisplayOptions::default()),
-            start_at: self.start_at,
-            stop_at: self.stop_at,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TimerCreationResponse {
-    timer: TimerResponse,
-    token: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct TimerCreationRequest {
-    // Get from User
-    segments: Vec<Segment>,
-    id: String,
-    password: String,
-    repeat: bool,
-    start_at: u64,
-}
-
-#[derive(Serialize, Deserialize)]
-struct TimerUpdateRequest {
-    // Get from User
-    segments: Vec<Segment>,
-    repeat: bool,
-    pub display_options: Option<DisplayOptions>,
-    start_at: u64,
-    stop_at: Option<u64>,
-}
-
-#[derive(Serialize, Deserialize)]
-struct TokenRequest {
-    id: String,
-    password: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Claims {
-    id: String,
-    exp: usize,
-    iss: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TokenResponse {
-    token: String,
-}
+use crate::models::*;
 
 async fn auth_middleware<B>(
     State(state): State<SharedState>,
