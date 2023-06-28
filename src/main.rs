@@ -7,14 +7,12 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::Span;
 mod color;
-mod routes;
 mod models;
+mod routes;
 
 use models::*;
 
 use tokio::sync::broadcast;
-
-
 
 #[tokio::main]
 async fn main() {
@@ -70,11 +68,9 @@ async fn main() {
         .layer(CatchPanicLayer::new())
         .with_state(state);
 
-    // run it with hyper on localhost:3000
+    println!("Starting server on port 3000");
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
-
-    println!("Server started on port 3000");
 }

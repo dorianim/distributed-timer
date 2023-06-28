@@ -1,6 +1,6 @@
-use serde::{Deserialize, Serialize};
 use crate::color::Color;
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use std::{sync::Arc};
 use tokio::sync::broadcast;
 
 //main.rs
@@ -38,16 +38,17 @@ pub struct DisplayOptions {
     pre_start_behaviour: PreStartBehaviour,
 }
 
+// Only to be stored internally
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Timer {
-    // Return after TimerRequest
     pub segments: Vec<Segment>,
     pub repeat: bool,
     pub display_options: Option<DisplayOptions>,
     pub start_at: u64,
     pub stop_at: Option<u64>,
     pub password: String,
-    pub id: String, // 5 random chars
+    pub id: String,
+    pub metadata: Option<Metadata>,
 }
 
 #[derive(Serialize, Clone)]
@@ -69,7 +70,6 @@ pub struct AppState {
     pub instance_properties: InstanceProperties,
     pub redis_task_rx: broadcast::Receiver<Timer>,
 }
-
 
 //timer.rs
 
@@ -138,4 +138,10 @@ pub struct Claims {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TokenResponse {
     pub token: String,
+}
+
+// new models
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct Metadata {
+    pub delay_on_change: u8,
 }

@@ -135,6 +135,7 @@ async fn create_timer(
         display_options: None,
         password,
         id: request.id,
+        metadata: Some(Metadata {delay_on_change: 0}),
     };
 
     redis
