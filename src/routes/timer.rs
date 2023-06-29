@@ -107,6 +107,18 @@ async fn create_token(
     Ok(Json(TokenResponse { token }))
 }
 
+fn check_sounds_in_segments(segments: Vec<Segment>) -> bool {
+    for segment in segments {
+        let start_time = segment.count_to + segment.time;
+        for sound in segment.sounds {
+            if sound.trigger_time > start_time || sound.trigger_time < segment.count_to {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 async fn create_timer(
     State(state): State<SharedState>,
     Json(request): Json<TimerCreationRequest>,
@@ -123,6 +135,11 @@ async fn create_timer(
         .unwrap()
     {
         return Err(StatusCode::CONFLICT);
+    }
+
+    // Sounds in segments are valid
+    if !check_sounds_in_segments(request.segments.clone()) {
+        return Err(StatusCode::BAD_REQUEST);
     }
 
     let password = hash_password(&request.password);

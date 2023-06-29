@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::color::Color;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -11,11 +11,18 @@ fn default_zero() -> u32 {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Segment {
     label: String,
-    time: u32,
+    pub time: u32,
     sound: bool,
     color: Option<Color>,
     #[serde(default = "default_zero")]
-    count_to: u32,
+    pub count_to: u32,
+    pub sounds: Vec<Sound>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Sound {
+    pub filename: String,
+    pub trigger_time: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -69,7 +76,6 @@ pub struct AppState {
     pub instance_properties: InstanceProperties,
     pub redis_task_rx: broadcast::Receiver<Timer>,
 }
-
 
 //timer.rs
 
