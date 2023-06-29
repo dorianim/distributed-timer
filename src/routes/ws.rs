@@ -26,7 +26,7 @@ use crate::Timer;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::timer::TimerResponse;
+use crate::models::*;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type", content = "data")]
