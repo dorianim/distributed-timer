@@ -1,6 +1,6 @@
 use crate::color::Color;
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc};
+use std::{sync::Arc, default};
 use tokio::sync::broadcast;
 
 //main.rs
@@ -20,8 +20,9 @@ pub struct Segment {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum PreStartBehaviour {
-    ShowZero,
-    RunNormally,
+    ShowZero, // showfirst (default)
+    ShowLastSegment,
+    RunNormally, 
 }
 
 impl Default for PreStartBehaviour {
@@ -48,6 +49,7 @@ pub struct Timer {
     pub stop_at: Option<u64>,
     pub password: String,
     pub id: String,
+    #[serde(default)]
     pub metadata: Option<Metadata>,
 }
 
@@ -141,7 +143,13 @@ pub struct TokenResponse {
 }
 
 // new models
+
+fn default_zero_u8() -> u8 {
+    0
+} 
+
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Metadata {
-    pub delay_on_change: u8,
+    #[serde(default = "default_zero_u8")]
+    pub delay_start_stop: u8,
 }
