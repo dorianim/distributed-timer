@@ -16,13 +16,11 @@ use futures::{
 use serde::{Deserialize, Serialize};
 use serde_json;
 
-use redis::AsyncCommands;
-use tokio::sync::broadcast;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::task::JoinHandle;
 
+use crate::repository::{Repository, Timer};
 use crate::SharedState;
-use crate::Timer;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -48,7 +46,7 @@ impl WsConnection {
 
         let ws_sender_task = WsConnection::spawn_ws_sender_task(ws_sender, ws_message_rx);
         let ws_receiver_task = WsConnection::spawn_ws_receiver_task(
-            state.redis.clone(),
+            state.repository.clone(),
             ws_message_tx.clone(),
             redis_listen_id_tx,
             ws_receiver,
@@ -56,7 +54,7 @@ impl WsConnection {
         let redis_listener_task = WsConnection::spawn_redis_listener_task(
             ws_message_tx,
             redis_listen_id_rx,
-            state.redis_task_rx.resubscribe(),
+            state.repository.updates_rx.resubscribe(),
         );
 
         ws_receiver_task.await.unwrap();
@@ -104,21 +102,21 @@ impl WsConnection {
     }
 
     fn spawn_ws_receiver_task(
-        redis: redis::aio::ConnectionManager,
+        repository: Repository,
         ws_message_tx: Sender<WSMessage>,
         redis_listen_id_tx: Sender<String>,
         ws_receiver: SplitStream<WebSocket>,
     ) -> JoinHandle<()> {
         tokio::spawn(async move {
             let mut message_handler =
-                WsMessageHandler::new(redis, ws_message_tx, redis_listen_id_tx, ws_receiver);
+                WsMessageHandler::new(repository, ws_message_tx, redis_listen_id_tx, ws_receiver);
             message_handler.listen().await;
         })
     }
 }
 
 struct WsMessageHandler {
-    redis: redis::aio::ConnectionManager,
+    repository: Repository,
     ws_message_tx: Sender<WSMessage>,
     redis_listen_id_tx: Sender<String>,
     ws_receiver: SplitStream<WebSocket>,
@@ -126,13 +124,13 @@ struct WsMessageHandler {
 
 impl WsMessageHandler {
     fn new(
-        redis: redis::aio::ConnectionManager,
+        repository: Repository,
         ws_message_tx: Sender<WSMessage>,
         redis_listen_id_tx: Sender<String>,
         ws_receiver: SplitStream<WebSocket>,
     ) -> Self {
         WsMessageHandler {
-            redis,
+            repository,
             ws_message_tx,
             redis_listen_id_tx,
             ws_receiver,
@@ -174,14 +172,10 @@ impl WsMessageHandler {
 
         self.redis_listen_id_tx.send(id.clone()).await.unwrap();
 
-        let timer_string = self.redis.get::<String, String>(id).await;
-        if timer_string.is_err() {
-            return WSMessage::Error((404, "Timer not found!".to_owned()));
-        }
-
-        let timer: Timer = serde_json::from_str(&timer_string.unwrap()).unwrap();
-
-        WSMessage::Timer(timer.into())
+        self.repository.get_timer(id).await.map_or_else(
+            || WSMessage::Error((404, "Timer not found!".to_owned())),
+            |t| WSMessage::Timer(t.into()),
+        )
     }
 }
 
@@ -190,46 +184,6 @@ pub async fn ws_handler(
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| WsConnection::new(state, socket))
-}
-
-pub fn spawn_global_redis_listener_task(
-    mut redis: redis::aio::ConnectionManager,
-    redis_client: redis::Client,
-    redis_task_tx: broadcast::Sender<Timer>,
-) -> JoinHandle<()> {
-    tokio::spawn(async move {
-        let mut connection = redis_client.get_async_connection().await.unwrap();
-        let _: () = redis::cmd("CONFIG")
-            .arg("SET")
-            .arg("notify-keyspace-events")
-            .arg("KEA")
-            .query_async(&mut connection)
-            .await
-            .unwrap();
-
-        let mut pubsub = connection.into_pubsub();
-
-        pubsub
-            .psubscribe("__keyspace@*__:*")
-            .await
-            .expect("Failed to subscribe to redis channel");
-
-        let mut pubsub = pubsub.into_on_message();
-
-        while let Some(msg) = pubsub.next().await {
-            println!("Updated! {:?}", msg);
-            let timer_id = msg.get_channel_name().split(":").last().unwrap();
-
-            let timer_str = &redis
-                .get::<String, String>(String::from(timer_id))
-                .await
-                .expect("Did not find timer in redis");
-            let timer: Timer = serde_json::from_str(timer_str).unwrap();
-
-            // Broadcast to all listeners
-            redis_task_tx.send(timer).unwrap();
-        }
-    })
 }
 
 pub fn routes() -> Router<SharedState> {
