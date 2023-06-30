@@ -176,8 +176,7 @@ void Hub75_Display::loop() {
       _setTextColor(0xff, 0xff, 0xff);
       _matrix->setCursor(49, 54);
 
-      _matrix->printf("%02d:%02d:%02d", time->tm_hour, time->tm_min,
-                      time->tm_sec);
+      _matrix->printf("%02d:%02d", time->tm_hour, time->tm_min);
     }
 
     break;
