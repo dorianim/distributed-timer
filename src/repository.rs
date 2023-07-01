@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::color::Color;
+use crate::{color::Color, redis_migrations::RedisTimer};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 
@@ -12,18 +12,17 @@ use tokio::{
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Segment {
-    label: String,
-    time: u32,
-    sound: bool,
-    color: Option<Color>,
-    #[serde(default = "default_zero")]
-    count_to: u32,
+    pub label: String,
+    pub time: u32,
+    pub sound: bool,
+    pub color: Option<Color>,
+    pub count_to: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Sound {
-    filename: String,
-    play_at: u32,
+    pub filename: String,
+    pub play_at: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -40,22 +39,19 @@ impl Default for PreStartBehaviour {
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct DisplayOptions {
-    #[serde(default)]
-    clock: bool,
-    #[serde(default)]
-    pre_start_behaviour: PreStartBehaviour,
+    pub clock: bool,
+    pub pre_start_behaviour: PreStartBehaviour,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
 pub struct Timer {
-    // Return after TimerRequest
     pub segments: Vec<Segment>,
     pub repeat: bool,
-    pub display_options: Option<DisplayOptions>,
+    pub display_options: DisplayOptions,
     pub start_at: u64,
     pub stop_at: Option<u64>,
     pub password: String,
-    pub id: String, // 5 random chars
+    pub id: String,
 }
 
 #[derive(Clone)]
@@ -89,8 +85,8 @@ impl Repository {
             return None;
         }
 
-        let timer: Timer = serde_json::from_str(timer.as_ref().unwrap()).unwrap();
-        Some(timer)
+        let timer: RedisTimer = serde_json::from_str(timer.as_ref().unwrap()).unwrap();
+        Some(timer.into())
     }
 
     pub async fn create_timer(&self, timer: &Timer) -> Result<(), ()> {
@@ -166,8 +162,4 @@ pub fn spawn_global_redis_listener_task(
             redis_task_tx.send(timer).unwrap();
         }
     })
-}
-
-fn default_zero() -> u32 {
-    0
 }

@@ -8,6 +8,7 @@ use tower_http::trace::TraceLayer;
 use tracing::Span;
 mod color;
 mod models;
+mod redis_migrations;
 mod repository;
 mod routes;
 

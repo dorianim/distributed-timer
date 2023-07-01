@@ -19,7 +19,7 @@ use argon2::{
 };
 
 use crate::models::*;
-use crate::repository::Timer;
+use crate::repository::{DisplayOptions, Timer};
 
 async fn auth_middleware<B>(
     State(state): State<SharedState>,
@@ -110,7 +110,7 @@ async fn create_timer(
         repeat: request.repeat,
         start_at: request.start_at,
         stop_at: None,
-        display_options: None,
+        display_options: DisplayOptions::default(),
         password,
         id: request.id,
     };
@@ -157,7 +157,7 @@ async fn update_timer(
     let timer = Timer {
         segments: request.segments,
         repeat: request.repeat,
-        display_options: request.display_options,
+        display_options: request.display_options.unwrap_or(DisplayOptions::default()),
         start_at: request.start_at,
         stop_at: request.stop_at,
         ..old_timer

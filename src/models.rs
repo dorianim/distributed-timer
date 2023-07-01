@@ -40,7 +40,7 @@ impl Into<TimerResponse> for Timer {
             segments: self.segments,
             id: self.id,
             repeat: self.repeat,
-            display_options: self.display_options.unwrap_or(DisplayOptions::default()),
+            display_options: self.display_options,
             start_at: self.start_at,
             stop_at: self.stop_at,
         }
