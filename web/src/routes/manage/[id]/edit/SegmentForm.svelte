@@ -54,7 +54,7 @@
 					>Beep at one minute and countdown at five seconds</option
 				>
 				<option value="beepFourMinutesOneMinute_countdownFiveSeconds"
-					>Beep at one minute and four minutes and countdown at five seconds</option
+					>Beep at four minutes and one minute and countdown at five seconds</option
 				>
 			</select>
 		</label>
