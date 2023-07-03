@@ -163,8 +163,8 @@
 			formData.segments.push({
 				label: `Segment ${formData.segments.length + 1}`,
 				time: 30 * 1000,
-				sound: false,
-				count_to: 0
+				count_to: 0,
+				sounds: []
 			});
 			formData.segments = [...formData.segments];
 		}}><span><Fa icon={faAdd} /></span> <span>New segment</span></button
