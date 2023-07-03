@@ -87,6 +87,21 @@
 		playCurrentSound(seconds, sounds);
 	};
 
+	const getAllSounds = (timer: Timer) => {
+		let sounds: string[] = [];
+
+		for (const segment of timer.segments) {
+			for (const sound of segment.sounds) {
+				const filename = `/sound/${sound.filename}`;
+				if (!sounds.includes(filename)) {
+					sounds.push(filename);
+				}
+			}
+		}
+
+		return sounds;
+	};
+
 	let audios: { [sound: string]: HTMLAudioElement } | undefined;
 	let currentSegment = calculateCurrentSegment();
 	let backgroundDiv: HTMLElement;
@@ -101,7 +116,7 @@
 
 	$: {
 		if (soundEnabled) {
-			audios = preloadSounds(['/sound/beep.mp3', '/sound/countdown.mp3']);
+			audios = preloadSounds(getAllSounds(timerData));
 		} else {
 			audios = undefined;
 		}
