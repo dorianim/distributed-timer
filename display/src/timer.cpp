@@ -8,16 +8,23 @@ TimerData _timerData;
 
 TimerData *timerData() { return &_timerData; }
 
-ActiveSegment calculateCurrentSegment(TIME timeOffset) {
-  if (!_timerData.valid || timeOffset == 0) {
-    return {0, 0xfff, "", 0};
-  }
+TIME calculateTimeInCurrentRound(TIME currentTime) {
 
-  TIME currentTime = (TIME)millis() + timeOffset;
   if (currentTime < _timerData.start_at &&
       _timerData.display_options.pre_start_behaviour ==
-          PreStartBehaviour::SHOW_ZERO) {
-    return {0, 0xfff, "", currentTime};
+          PreStartBehaviour::SHOW_FIRST_SEGMENT) {
+    return 1;
+  }
+
+  long totalTimePerRound = 0;
+  for (int i = 0; i < 10 && _timerData.segments[i].valid; i++) {
+    totalTimePerRound += _timerData.segments[i].time;
+  }
+
+  if (currentTime < _timerData.start_at &&
+      _timerData.display_options.pre_start_behaviour ==
+          PreStartBehaviour::SHOW_LAST_SEGMENT) {
+    return totalTimePerRound;
   }
 
   long elapsedTime = currentTime - _timerData.start_at;
@@ -26,16 +33,20 @@ ActiveSegment calculateCurrentSegment(TIME timeOffset) {
     elapsedTime = _timerData.stop_at - _timerData.start_at;
   }
 
-  long totalTimePerRound = 0;
-  for (int i = 0; i < 10 && _timerData.segments[i].valid; i++) {
-    totalTimePerRound += _timerData.segments[i].time;
-  }
-
   if (!_timerData.repeat && elapsedTime > totalTimePerRound) {
-    return {0, 0xfff, "", currentTime};
+    return totalTimePerRound;
   }
 
-  long timeInCurrentRound = elapsedTime % totalTimePerRound;
+  return elapsedTime % totalTimePerRound;
+}
+
+ActiveSegment calculateCurrentSegment(TIME timeOffset) {
+  if (!_timerData.valid || timeOffset == 0) {
+    return {0, 0xfff, "", 0};
+  }
+
+  TIME currentTime = (TIME)millis() + timeOffset;
+  long timeInCurrentRound = calculateTimeInCurrentRound(currentTime);
 
   int currentSegmentIndex = 0;
   long timeInCurrentSegment = 0;
