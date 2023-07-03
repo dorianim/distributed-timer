@@ -14,15 +14,15 @@ use tokio::{
 pub struct Segment {
     pub label: String,
     pub time: u32,
-    pub sound: bool,
     pub color: Option<Color>,
     pub count_to: u32,
+    pub sounds: Vec<Sound>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Sound {
     pub filename: String,
-    pub play_at: u32,
+    pub trigger_time: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
