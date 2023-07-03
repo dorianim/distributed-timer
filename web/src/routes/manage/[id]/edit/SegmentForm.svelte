@@ -49,7 +49,7 @@
 		<label class="">
 			Sounds to play:
 			<select class="select" bind:value={soundPreset}>
-				<option value={null}>No sound</option>
+				<option value={null}>No sounds</option>
 				<option value="beepOneMinute_countdownFiveSeconds"
 					>Beep at one minute and countdown at five seconds</option
 				>
