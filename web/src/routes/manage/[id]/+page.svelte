@@ -41,11 +41,11 @@
 	};
 
 	const restartTimer = () => {
-		_updateTimer(new Date().getTime());
+		_updateTimer(new Date().getTime() + timerData.metadata.delay_start_stop);
 	};
 
 	const stopTimer = () => {
-		_updateTimer(undefined, new Date().getTime());
+		_updateTimer(undefined, new Date().getTime() + timerData.metadata.delay_start_stop);
 	};
 
 	const resumeTimer = () => {

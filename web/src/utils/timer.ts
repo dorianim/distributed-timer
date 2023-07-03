@@ -36,14 +36,21 @@ function calculateTimeInCurrentRound(
 
 	const elapsedTime = currentTime - timerData.start_at;
 
-	if (elapsedTime < 0 && timerData.display_options.pre_start_behaviour === 'ShowZero') {
+	if (elapsedTime < 0 && timerData.display_options.pre_start_behaviour === 'ShowFirstSegment') {
 		return {
-			timeInCurrentRound: 0,
+			timeInCurrentRound: 1,
 			state: 'waiting'
 		};
 	}
 
 	const totalTimePerRound = timerData.segments.reduce((acc, curr) => acc + curr.time, 0);
+
+	if (elapsedTime < 0 && timerData.display_options.pre_start_behaviour === 'ShowLastSegment') {
+		return {
+			timeInCurrentRound: totalTimePerRound,
+			state: 'waiting'
+		};
+	}
 
 	if (!timerData.repeat && !stopped && elapsedTime > totalTimePerRound) {
 		return {

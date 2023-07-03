@@ -4,10 +4,19 @@
 	import { createForm } from 'felte';
 	import { validator } from '@felte/validator-yup';
 	import * as yup from 'yup';
+	import type { Segment } from 'types/segment';
+	import type { DisplayOptions } from 'types/displayOptions';
+	import type { TimerMetadata } from 'types/timerMetadata';
 
 	export let onSubmit: (timerData: TimerCreationRequest) => void;
 
-	const templates = [
+	const templates: {
+		name: string;
+		repeat: boolean;
+		segments: Segment[];
+		display_options: DisplayOptions;
+		metadata: TimerMetadata;
+	}[] = [
 		{
 			name: 'Boulder quali 4min + 15s',
 			repeat: true,
@@ -15,7 +24,14 @@
 				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
 				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
 				{ label: 'Change', time: 14000, sound: true, color: '#E66100', count_to: 1000 }
-			]
+			],
+			display_options: {
+				clock: true,
+				pre_start_behaviour: 'RunNormally'
+			},
+			metadata: {
+				delay_start_stop: 0
+			}
 		},
 		{
 			name: 'Boulder quali 5min + 15s',
@@ -24,7 +40,14 @@
 				{ label: 'Boulder', time: 290000, sound: true, color: '#26A269', count_to: 11000 },
 				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
 				{ label: 'Change', time: 14000, sound: true, color: '#E66100', count_to: 1000 }
-			]
+			],
+			display_options: {
+				clock: true,
+				pre_start_behaviour: 'RunNormally'
+			},
+			metadata: {
+				delay_start_stop: 0
+			}
 		},
 		{
 			name: 'Boulder final 4min + wait',
@@ -33,7 +56,14 @@
 				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
 				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
 				{ label: 'Wait', time: 1000, sound: true, color: '#1C71D8', count_to: 240000 }
-			]
+			],
+			display_options: {
+				clock: true,
+				pre_start_behaviour: 'ShowLastSegment'
+			},
+			metadata: {
+				delay_start_stop: 3000
+			}
 		}
 	];
 
@@ -53,7 +83,9 @@
 				password: values.password,
 				start_at: new Date().getTime(),
 				repeat: templates[values.segments].repeat,
-				segments: templates[values.segments].segments
+				segments: templates[values.segments].segments,
+				display_options: templates[values.segments].display_options,
+				metadata: templates[values.segments].metadata
 			};
 			onSubmit(formData);
 		},

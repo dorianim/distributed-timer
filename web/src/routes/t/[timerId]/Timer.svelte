@@ -51,18 +51,7 @@
 		currentTime: number;
 	} = () => {
 		const currentTime = performance.now() + timeOffset;
-		const segments = timerData.segments;
-		let { timeInCurrentRound, state } = calculateTimeInCurrentRound(timerData, currentTime);
-
-		if (state == 'waiting') {
-			return {
-				timerText: getTimerText(0),
-				label: '',
-				seconds: 0,
-				sound: false,
-				currentTime: currentTime
-			};
-		}
+		let { timeInCurrentRound } = calculateTimeInCurrentRound(timerData, currentTime);
 
 		const { timeInCurrentSegment, currentSegment } = calculateTimeInCurrentSegment(
 			timeInCurrentRound,
