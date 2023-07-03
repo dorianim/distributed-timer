@@ -7,6 +7,7 @@
 		calculateTimeInCurrentSegment,
 		getTimerText
 	} from '../../../utils/timer';
+	import type { Sound } from 'types/segment';
 
 	export let timerData: Timer;
 	export let soundEnabled: boolean;
@@ -35,11 +36,12 @@
 		}
 	};
 
-	const playCurrentSound = (seconds: number) => {
+	const playCurrentSound = (seconds: number, sounds: Sound[]) => {
 		if (!soundEnabled || !audios) return;
 
-		playSoundAt(60, seconds, '/sound/beep.mp3');
-		playSoundAt(5, seconds, '/sound/countdown.mp3');
+		for (const sound of sounds) {
+			playSoundAt(sound.trigger_time, seconds, `/sound/${sound.filename}`);
+		}
 	};
 
 	const calculateCurrentSegment: () => {
@@ -47,7 +49,7 @@
 		label: string;
 		seconds: number;
 		color?: string;
-		sound: boolean;
+		sounds: Sound[];
 		currentTime: number;
 	} = () => {
 		const currentTime = performance.now() + timeOffset;
@@ -65,14 +67,14 @@
 			label: currentSegment.label,
 			seconds: Math.floor(effectiveTimeInCurrentSegment / 1000),
 			color: currentSegment.color,
-			sound: currentSegment.sound,
+			sounds: currentSegment.sounds,
 			currentTime: currentTime
 		};
 	};
 
 	const update = () => {
 		currentSegment = calculateCurrentSegment();
-		const { timerText, label, color, seconds } = currentSegment;
+		const { timerText, label, color, seconds, sounds } = currentSegment;
 
 		if (timerSpan !== null) {
 			timerSpan.innerText = timerText;
@@ -82,7 +84,7 @@
 				color ?? 'rgb(var(--color-surface-900))'
 			);
 		}
-		playCurrentSound(seconds);
+		playCurrentSound(seconds, sounds);
 	};
 
 	let audios: { [sound: string]: HTMLAudioElement } | undefined;

@@ -1,7 +1,12 @@
+export interface Sound {
+	filename: string;
+	trigger_time: number;
+}
+
 export interface Segment {
 	label: string;
 	time: number;
-	sound: boolean;
 	color?: string;
 	count_to: number;
+	sounds: Sound[];
 }
