@@ -10,8 +10,6 @@ use axum::{
     Json, TypedHeader,
 };
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-use redis::aio::ConnectionManager;
-use redis::AsyncCommands;
 use regex::Regex;
 use std::str;
 
@@ -21,6 +19,7 @@ use argon2::{
 };
 
 use crate::models::*;
+use crate::repository::Timer;
 
 async fn auth_middleware<B>(
     State(state): State<SharedState>,
@@ -61,20 +60,6 @@ fn check_password_hash(password: &str, password_hash: &str) -> bool {
         .is_ok()
 }
 
-async fn get_timer_from_redis(
-    id: String,
-    redis: &mut ConnectionManager,
-) -> Result<Timer, StatusCode> {
-    let timer = &redis.get::<String, String>(id).await;
-
-    if timer.is_err() {
-        return Err(StatusCode::UNAUTHORIZED);
-    }
-
-    let timer: Timer = serde_json::from_str(timer.as_ref().unwrap()).unwrap();
-    Ok(timer)
-}
-
 fn create_jwt(id: String, key: &str) -> String {
     let claims = Claims {
         id: id,
@@ -94,9 +79,12 @@ async fn create_token(
     State(state): State<SharedState>,
     Json(request): Json<TokenRequest>,
 ) -> Result<Json<TokenResponse>, StatusCode> {
-    let mut redis = state.as_ref().redis.clone();
-
-    let timer = get_timer_from_redis(request.id.clone(), &mut redis).await?;
+    let timer = state
+        .repository
+        .get_timer(request.id.clone())
+        .await
+        .map(|t| Ok(t))
+        .unwrap_or(Err(StatusCode::UNAUTHORIZED))?;
 
     if !check_password_hash(&request.password, &timer.password) {
         return Err(StatusCode::UNAUTHORIZED);
@@ -115,32 +103,15 @@ async fn create_timer(
     if !id_regex.is_match(&request.id) {
         return Err(StatusCode::BAD_REQUEST);
     }
-    // Timer already exists
-    let mut redis = state.as_ref().redis.clone();
-    if redis
-        .exists::<String, bool>(request.id.clone())
+
+    let hashed_password = hash_password(&request.password);
+    let timer = request.into(hashed_password);
+
+    state
+        .repository
+        .create_timer(&timer)
         .await
-        .unwrap()
-    {
-        return Err(StatusCode::CONFLICT);
-    }
-
-    let password = hash_password(&request.password);
-
-    let timer = Timer {
-        segments: request.segments,
-        repeat: request.repeat,
-        start_at: request.start_at,
-        stop_at: None,
-        display_options: None,
-        password,
-        id: request.id,
-    };
-
-    redis
-        .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
-        .await
-        .unwrap();
+        .map_err(|_| StatusCode::CONFLICT)?;
 
     let token = create_jwt(timer.id.clone(), &state.jwt_key);
 
@@ -154,8 +125,12 @@ async fn get_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Result<Json<TimerResponse>, StatusCode> {
-    let mut redis = state.as_ref().redis.clone();
-    let timer = get_timer_from_redis(id, &mut redis).await?;
+    let timer = state
+        .repository
+        .get_timer(id)
+        .await
+        .map(|t| Ok(t))
+        .unwrap_or(Err(StatusCode::UNAUTHORIZED))?;
     Ok(Json(timer.into()))
 }
 
@@ -164,23 +139,24 @@ async fn update_timer(
     Path(id): Path<String>,
     Json(request): Json<TimerUpdateRequest>,
 ) -> Result<Json<TimerResponse>, StatusCode> {
-    let mut redis = state.as_ref().redis.clone();
-
-    let old_timer: Timer = get_timer_from_redis(id, &mut redis).await?;
+    let old_timer: Timer = state
+        .repository
+        .get_timer(id)
+        .await
+        .map(|t| Ok(t))
+        .unwrap_or(Err(StatusCode::UNAUTHORIZED))?;
 
     let timer = Timer {
         segments: request.segments,
         repeat: request.repeat,
         display_options: request.display_options,
+        metadata: request.metadata,
         start_at: request.start_at,
         stop_at: request.stop_at,
         ..old_timer
     };
 
-    redis
-        .set::<String, String, ()>(timer.id.clone(), serde_json::to_string(&timer).unwrap())
-        .await
-        .unwrap();
+    state.repository.update_timer(&timer).await;
 
     Ok(Json(timer.into()))
 }
@@ -189,12 +165,12 @@ async fn delete_timer(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let mut redis = state.as_ref().redis.clone();
-    if redis.del::<String, ()>(id).await.is_err() {
-        StatusCode::NOT_FOUND
-    } else {
-        StatusCode::OK
-    }
+    state
+        .repository
+        .delete_timer(id)
+        .await
+        .map(|_| StatusCode::OK)
+        .map_err(|_| StatusCode::NOT_FOUND)
 }
 
 pub fn routes(state: SharedState) -> Router<SharedState> {

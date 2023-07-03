@@ -1,54 +1,6 @@
+use crate::repository::{DisplayOptions, Repository, Segment, Timer, TimerMetadata};
 use serde::{Deserialize, Serialize};
-use crate::color::Color;
 use std::sync::Arc;
-use tokio::sync::broadcast;
-
-//main.rs
-fn default_zero() -> u32 {
-    0
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Segment {
-    label: String,
-    time: u32,
-    sound: bool,
-    color: Option<Color>,
-    #[serde(default = "default_zero")]
-    count_to: u32,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub enum PreStartBehaviour {
-    ShowZero,
-    RunNormally,
-}
-
-impl Default for PreStartBehaviour {
-    fn default() -> Self {
-        PreStartBehaviour::ShowZero
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct DisplayOptions {
-    #[serde(default)]
-    clock: bool,
-    #[serde(default)]
-    pre_start_behaviour: PreStartBehaviour,
-}
-
-#[derive(Serialize, Deserialize, Clone, Default, Debug)]
-pub struct Timer {
-    // Return after TimerRequest
-    pub segments: Vec<Segment>,
-    pub repeat: bool,
-    pub display_options: Option<DisplayOptions>,
-    pub start_at: u64,
-    pub stop_at: Option<u64>,
-    pub password: String,
-    pub id: String, // 5 random chars
-}
 
 #[derive(Serialize, Clone)]
 #[serde(tag = "type", content = "data")]
@@ -60,16 +12,15 @@ pub enum DonationMethod {
 pub struct InstanceProperties {
     pub demo: bool,
     pub donation: Option<Vec<DonationMethod>>,
+    pub s3_host: String,
 }
 
 pub type SharedState = Arc<AppState>;
 pub struct AppState {
-    pub redis: redis::aio::ConnectionManager,
+    pub repository: Repository,
     pub jwt_key: String,
     pub instance_properties: InstanceProperties,
-    pub redis_task_rx: broadcast::Receiver<Timer>,
 }
-
 
 //timer.rs
 
@@ -81,6 +32,7 @@ pub struct TimerResponse {
     pub display_options: DisplayOptions,
     pub start_at: u64,
     pub stop_at: Option<u64>,
+    pub metadata: TimerMetadata,
 }
 
 impl Into<TimerResponse> for Timer {
@@ -89,9 +41,10 @@ impl Into<TimerResponse> for Timer {
             segments: self.segments,
             id: self.id,
             repeat: self.repeat,
-            display_options: self.display_options.unwrap_or(DisplayOptions::default()),
+            display_options: self.display_options,
             start_at: self.start_at,
             stop_at: self.stop_at,
+            metadata: self.metadata,
         }
     }
 }
@@ -104,20 +57,36 @@ pub struct TimerCreationResponse {
 
 #[derive(Serialize, Deserialize)]
 pub struct TimerCreationRequest {
-    // Get from User
     pub segments: Vec<Segment>,
     pub id: String,
     pub password: String,
     pub repeat: bool,
     pub start_at: u64,
+    pub metadata: TimerMetadata,
+    pub display_options: DisplayOptions,
+}
+
+impl TimerCreationRequest {
+    pub fn into(self, hashed_password: String) -> Timer {
+        Timer {
+            segments: self.segments,
+            repeat: self.repeat,
+            display_options: self.display_options,
+            start_at: self.start_at,
+            stop_at: None,
+            password: hashed_password,
+            id: self.id,
+            metadata: self.metadata,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct TimerUpdateRequest {
-    // Get from User
     pub segments: Vec<Segment>,
     pub repeat: bool,
-    pub display_options: Option<DisplayOptions>,
+    pub display_options: DisplayOptions,
+    pub metadata: TimerMetadata,
     pub start_at: u64,
     pub stop_at: Option<u64>,
 }
@@ -138,4 +107,31 @@ pub struct Claims {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TokenResponse {
     pub token: String,
+}
+
+///
+/// Websocket
+///
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WsTimerResponse {
+    pub segments: Vec<Segment>,
+    pub id: String,
+    pub repeat: bool,
+    pub display_options: DisplayOptions,
+    pub start_at: u64,
+    pub stop_at: Option<u64>,
+}
+
+impl Into<WsTimerResponse> for Timer {
+    fn into(self) -> WsTimerResponse {
+        WsTimerResponse {
+            segments: self.segments,
+            id: self.id,
+            repeat: self.repeat,
+            display_options: self.display_options,
+            start_at: self.start_at,
+            stop_at: self.stop_at,
+        }
+    }
 }

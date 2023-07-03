@@ -7,14 +7,14 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::Span;
 mod color;
-mod routes;
 mod models;
+mod redis_migrations;
+mod repository;
+mod routes;
 
 use models::*;
 
-use tokio::sync::broadcast;
-
-
+use crate::repository::Repository;
 
 #[tokio::main]
 async fn main() {
@@ -23,30 +23,23 @@ async fn main() {
         .allow_headers(Any)
         .allow_methods(Any);
 
-    let redis_string = env::var("REDIS_STRING").expect("REDIS_STRING is not set");
-    let jwt_key = env::var("JWT_KEY").expect("JWT_KEY is not set");
-    let client = redis::Client::open(redis_string.to_owned()).expect("Could not connect to redis");
-    let manager = redis::aio::ConnectionManager::new(client.clone())
-        .await
-        .unwrap();
-
     let instance_properties = InstanceProperties {
         demo: env::var("INSTANCE_DEMO").unwrap_or("false".to_owned()) == "true",
         donation: env::var("INSTANCE_DONATION_PAYPAL")
             .map(|id| Some(vec![DonationMethod::PayPal(id)]))
             .unwrap_or(None),
+        s3_host: env::var("S3_HOST").unwrap_or("".to_owned()),
     };
+    let jwt_key = env::var("JWT_KEY").expect("JWT_KEY is not set");
+    let redis_string = env::var("REDIS_STRING").expect("REDIS_STRING is not set");
 
-    let (redis_task_tx, redis_task_rx) = broadcast::channel::<Timer>(10);
+    let repository = Repository::new(redis_string).await;
 
     let state: SharedState = Arc::new(AppState {
-        redis: manager.clone(),
+        repository,
         jwt_key,
         instance_properties,
-        redis_task_rx,
     });
-
-    routes::ws::spawn_global_redis_listener_task(manager, client, redis_task_tx);
 
     let app = Router::new()
         .nest("/api/ws", routes::ws::routes())
