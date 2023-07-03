@@ -25,15 +25,16 @@ pub struct Sound {
     pub play_at: u32,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub enum PreStartBehaviour {
-    ShowZero,
+    ShowFirstSegment,
+    ShowLastSegment,
     RunNormally,
 }
 
 impl Default for PreStartBehaviour {
     fn default() -> Self {
-        PreStartBehaviour::ShowZero
+        PreStartBehaviour::ShowFirstSegment
     }
 }
 
@@ -41,6 +42,11 @@ impl Default for PreStartBehaviour {
 pub struct DisplayOptions {
     pub clock: bool,
     pub pre_start_behaviour: PreStartBehaviour,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
+pub struct TimerMetadata {
+    pub delay_start_stop: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug)]
@@ -52,6 +58,7 @@ pub struct Timer {
     pub stop_at: Option<u64>,
     pub password: String,
     pub id: String,
+    pub metadata: TimerMetadata,
 }
 
 #[derive(Clone)]

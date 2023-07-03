@@ -19,7 +19,7 @@ use argon2::{
 };
 
 use crate::models::*;
-use crate::repository::{DisplayOptions, Timer};
+use crate::repository::Timer;
 
 async fn auth_middleware<B>(
     State(state): State<SharedState>,
@@ -104,16 +104,8 @@ async fn create_timer(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let password = hash_password(&request.password);
-    let timer = Timer {
-        segments: request.segments,
-        repeat: request.repeat,
-        start_at: request.start_at,
-        stop_at: None,
-        display_options: DisplayOptions::default(),
-        password,
-        id: request.id,
-    };
+    let hashed_password = hash_password(&request.password);
+    let timer = request.into(hashed_password);
 
     state
         .repository
@@ -157,7 +149,8 @@ async fn update_timer(
     let timer = Timer {
         segments: request.segments,
         repeat: request.repeat,
-        display_options: request.display_options.unwrap_or(DisplayOptions::default()),
+        display_options: request.display_options,
+        metadata: request.metadata,
         start_at: request.start_at,
         stop_at: request.stop_at,
         ..old_timer

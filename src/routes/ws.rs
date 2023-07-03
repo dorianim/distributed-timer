@@ -19,8 +19,10 @@ use serde_json;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::task::JoinHandle;
 
-use crate::repository::{Repository, Timer};
-use crate::SharedState;
+use crate::{
+    repository::{Repository, Timer},
+    SharedState,
+};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -31,7 +33,7 @@ use crate::models::*;
 enum WSMessage {
     Hello(String),
     GetTime,
-    Timer(TimerResponse),
+    Timer(WsTimerResponse),
     Timestamp(u128),
     Error((u128, String)),
 }

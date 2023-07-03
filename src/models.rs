@@ -1,4 +1,4 @@
-use crate::repository::{DisplayOptions, Repository, Segment, Timer};
+use crate::repository::{DisplayOptions, Repository, Segment, Timer, TimerMetadata};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -32,6 +32,7 @@ pub struct TimerResponse {
     pub display_options: DisplayOptions,
     pub start_at: u64,
     pub stop_at: Option<u64>,
+    pub metadata: TimerMetadata,
 }
 
 impl Into<TimerResponse> for Timer {
@@ -43,6 +44,7 @@ impl Into<TimerResponse> for Timer {
             display_options: self.display_options,
             start_at: self.start_at,
             stop_at: self.stop_at,
+            metadata: self.metadata,
         }
     }
 }
@@ -55,20 +57,36 @@ pub struct TimerCreationResponse {
 
 #[derive(Serialize, Deserialize)]
 pub struct TimerCreationRequest {
-    // Get from User
     pub segments: Vec<Segment>,
     pub id: String,
     pub password: String,
     pub repeat: bool,
     pub start_at: u64,
+    pub metadata: TimerMetadata,
+    pub display_options: DisplayOptions,
+}
+
+impl TimerCreationRequest {
+    pub fn into(self, hashed_password: String) -> Timer {
+        Timer {
+            segments: self.segments,
+            repeat: self.repeat,
+            display_options: self.display_options,
+            start_at: self.start_at,
+            stop_at: None,
+            password: hashed_password,
+            id: self.id,
+            metadata: self.metadata,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct TimerUpdateRequest {
-    // Get from User
     pub segments: Vec<Segment>,
     pub repeat: bool,
-    pub display_options: Option<DisplayOptions>,
+    pub display_options: DisplayOptions,
+    pub metadata: TimerMetadata,
     pub start_at: u64,
     pub stop_at: Option<u64>,
 }
@@ -89,4 +107,31 @@ pub struct Claims {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TokenResponse {
     pub token: String,
+}
+
+///
+/// Websocket
+///
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct WsTimerResponse {
+    pub segments: Vec<Segment>,
+    pub id: String,
+    pub repeat: bool,
+    pub display_options: DisplayOptions,
+    pub start_at: u64,
+    pub stop_at: Option<u64>,
+}
+
+impl Into<WsTimerResponse> for Timer {
+    fn into(self) -> WsTimerResponse {
+        WsTimerResponse {
+            segments: self.segments,
+            id: self.id,
+            repeat: self.repeat,
+            display_options: self.display_options,
+            start_at: self.start_at,
+            stop_at: self.stop_at,
+        }
+    }
 }
