@@ -36,7 +36,7 @@
 	};
 
 	const stopTimer = () => {
-		_updateTimer(undefined, new Date().getTime() + timerData.metadata.delay_start_stop);
+		_updateTimer(undefined, new Date().getTime());
 	};
 
 	const resumeTimer = () => {

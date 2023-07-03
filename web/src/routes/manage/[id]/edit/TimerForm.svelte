@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SlideToggle } from '@skeletonlabs/skeleton';
+	import { RangeSlider, SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
 	import {
 		faTrash,
@@ -19,13 +19,14 @@
 	import SegmentInfoBox from './SegmentInfoBox.svelte';
 	import { slide } from 'svelte/transition';
 	import type { DisplayOptions } from 'types/displayOptions';
+	import type { TimerMetadata } from 'types/timerMetadata';
 	interface TimerFormData {
 		start_at_date: string;
 		start_at_time: string;
 		repeat: boolean;
 		segments: Segment[];
 		display_options: DisplayOptions;
-		precision_mode: boolean;
+		metadata: TimerMetadata;
 	}
 
 	export let timerData: Timer;
@@ -50,7 +51,7 @@
 			repeat: timerData.repeat,
 			segments: timerData.segments,
 			display_options: timerData.display_options,
-			precision_mode: timerData.metadata.delay_start_stop !== 0
+			metadata: timerData.metadata
 		};
 	};
 
@@ -59,10 +60,7 @@
 			...timerData,
 			start_at: new Date(`${formData.start_at_date} ${formData.start_at_time}`).getTime(),
 			repeat: formData.repeat,
-			segments: formData.segments,
-			metadata: {
-				delay_start_stop: formData.precision_mode ? 3000 : 0
-			}
+			segments: formData.segments
 		};
 	};
 
@@ -75,6 +73,8 @@
 	};
 
 	formData = timerDataToFormData(timerData);
+
+	const precisionLabel = ['none', 'low', 'medium', 'high', 'very high'];
 </script>
 
 <a href="/manage/{timerData.id}" class="btn variant-glass-primary mb-3"
@@ -196,21 +196,29 @@
 	</div>
 
 	<div class="pl-2">
-		<SlideToggle
-			active="bg-primary-500"
-			name="repeat"
-			size="sm"
-			bind:checked={formData.precision_mode}
+		<RangeSlider
+			name="range-slider"
+			bind:value={formData.metadata.delay_start_stop}
+			max={4000}
+			step={1000}
+			ticked
 		>
-			<div class="grid grid-cols-2 gap-2 items-center">
-				precision mode
-				<HelpPopup>
-					Delays changes to the timer by 3 seconds to make sure all displays have received the
-					update before anything changes. This is useful to make sure all displays are in perfect
-					sync if you have a lot of displays and/or a slow internet connection.
-				</HelpPopup>
+			<div class="flex justify-between items-center">
+				<div class="grid grid-cols-2 gap-2 items-center">
+					Restart precision
+					<HelpPopup>
+						Delays changes to the timer by the set amount of seconds to make sure all displays have
+						received the update before anything changes. This is useful to make sure all displays
+						change in perfect sync if you have a lot of displays and/or a slow internet connection.
+					</HelpPopup>
+				</div>
+				<div class="text-xs">
+					{formData.metadata.delay_start_stop / 1000}s ({precisionLabel[
+						formData.metadata.delay_start_stop / 1000
+					]})
+				</div>
 			</div>
-		</SlideToggle>
+		</RangeSlider>
 	</div>
 
 	<label class="pl-2 w-auto">
