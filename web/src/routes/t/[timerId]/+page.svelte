@@ -8,7 +8,7 @@
 	import { API_WS_URL } from '../../../stores';
 	import NoSleep from 'nosleep.js';
 	import { goto } from '$app/navigation';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
 
 	export let data: PageData;
 

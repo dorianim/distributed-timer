@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { faRemove } from '@fortawesome/free-solid-svg-icons';
-	import { SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
 	import type { Segment } from 'types/segment';
 	import TimeInputField from './TimeInputField.svelte';
 	import { detectSoundPreset, soundPresets } from 'utils/sounds';
-	import HelpPopup from 'components/HelpPopup.svelte';
 
 	export let segment: Segment;
 	let clazz: string = '';

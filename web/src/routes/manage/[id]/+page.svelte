@@ -1,16 +1,7 @@
 <script lang="ts">
 	import Fa from 'svelte-fa';
 	import type { PageData } from './$types';
-	import {
-		faChevronRight,
-		faCircleCheck,
-		faClose,
-		faEdit,
-		faForward,
-		faPause,
-		faPlay,
-		faRefresh
-	} from '@fortawesome/free-solid-svg-icons';
+	import { faEdit, faForward, faPause, faPlay, faRefresh } from '@fortawesome/free-solid-svg-icons';
 	import {
 		updateTimer,
 		calculateStartTimeAfterResume,

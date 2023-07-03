@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { ProgressRadial, SlideToggle } from '@skeletonlabs/skeleton';
-	import { get } from 'svelte/store';
-	import { API_URL } from 'stores';
+	import { ProgressRadial } from '@skeletonlabs/skeleton';
 	import type { Timer, TimerUpdateRequest } from 'types/timer';
 	import type { PageData } from '../$types';
 	import TimerForm from './TimerForm.svelte';
