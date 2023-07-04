@@ -109,12 +109,15 @@ uint32_t _parseHexColor(const char *c) {
 
 void _loadDisplayOptions(JsonObject &data) {
   String pre_start_behaviour = data["pre_start_behaviour"];
-  if (pre_start_behaviour == "ShowZero") {
+  if (pre_start_behaviour == "ShowLastSegment") {
     _timerData->display_options.pre_start_behaviour =
-        timer::PreStartBehaviour::SHOW_ZERO;
+        timer::PreStartBehaviour::SHOW_LAST_SEGMENT;
   } else if (pre_start_behaviour == "RunNormally") {
     _timerData->display_options.pre_start_behaviour =
         timer::PreStartBehaviour::RUN_NORMALLY;
+  } else {
+    _timerData->display_options.pre_start_behaviour =
+        timer::PreStartBehaviour::SHOW_FIRST_SEGMENT;
   }
 
   _timerData->display_options.clock = data["clock"];

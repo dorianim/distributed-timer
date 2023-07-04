@@ -1,13 +1,25 @@
 <script lang="ts">
 	import { faRemove } from '@fortawesome/free-solid-svg-icons';
-	import { SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
 	import type { Segment } from 'types/segment';
 	import TimeInputField from './TimeInputField.svelte';
+	import { detectSoundPreset, soundPresets } from 'utils/sounds';
 
 	export let segment: Segment;
 	let clazz: string = '';
 	export { clazz as class };
+
+	let soundPreset = detectSoundPreset(segment.sounds);
+
+	const updateSegmentSounds = (preset: string | null) => {
+		if (!preset) {
+			segment.sounds = [];
+			return;
+		}
+		segment.sounds = soundPresets[preset];
+	};
+
+	$: updateSegmentSounds(soundPreset);
 </script>
 
 <div class="p-[2px] {clazz}">
@@ -32,9 +44,18 @@
 			<TimeInputField class="flex-1" bind:time={segment.count_to} label="Count to:" />
 		</div>
 
-		<SlideToggle active="bg-primary-500" name="sound" size="sm" bind:checked={segment.sound}
-			>enable sound</SlideToggle
-		>
+		<label class="">
+			Sounds to play:
+			<select class="select" bind:value={soundPreset}>
+				<option value={null}>No sounds</option>
+				<option value="beepOneMinute_countdownFiveSeconds"
+					>Beep at one minute and countdown at five seconds</option
+				>
+				<option value="beepFourMinutesOneMinute_countdownFiveSeconds"
+					>Beep at four minutes and one minute and countdown at five seconds</option
+				>
+			</select>
+		</label>
 
 		<label class="label">
 			<div class="flex items-center">

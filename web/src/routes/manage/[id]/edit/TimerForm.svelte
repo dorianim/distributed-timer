@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SlideToggle } from '@skeletonlabs/skeleton';
+	import { RangeSlider, SlideToggle } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
 	import {
 		faTrash,
@@ -18,16 +18,15 @@
 	import HelpPopup from 'components/HelpPopup.svelte';
 	import SegmentInfoBox from './SegmentInfoBox.svelte';
 	import { slide } from 'svelte/transition';
-
+	import type { DisplayOptions } from 'types/displayOptions';
+	import type { TimerMetadata } from 'types/timerMetadata';
 	interface TimerFormData {
 		start_at_date: string;
 		start_at_time: string;
 		repeat: boolean;
 		segments: Segment[];
-		display_options: {
-			clock: boolean;
-			run_before_started: boolean;
-		};
+		display_options: DisplayOptions;
+		metadata: TimerMetadata;
 	}
 
 	export let timerData: Timer;
@@ -51,10 +50,8 @@
 			}),
 			repeat: timerData.repeat,
 			segments: timerData.segments,
-			display_options: {
-				clock: timerData.display_options.clock,
-				run_before_started: timerData.display_options.pre_start_behaviour === 'RunNormally'
-			}
+			display_options: timerData.display_options,
+			metadata: timerData.metadata
 		};
 	};
 
@@ -63,13 +60,7 @@
 			...timerData,
 			start_at: new Date(`${formData.start_at_date} ${formData.start_at_time}`).getTime(),
 			repeat: formData.repeat,
-			segments: formData.segments,
-			display_options: {
-				clock: formData.display_options.clock,
-				pre_start_behaviour: formData.display_options.run_before_started
-					? 'RunNormally'
-					: 'ShowZero'
-			}
+			segments: formData.segments
 		};
 	};
 
@@ -82,12 +73,14 @@
 	};
 
 	formData = timerDataToFormData(timerData);
+
+	const precisionLabel = ['none', 'low', 'medium', 'high', 'very high'];
 </script>
 
 <a href="/manage/{timerData.id}" class="btn variant-glass-primary mb-3"
 	><Fa icon={faArrowLeft} />&nbsp; back to overview</a
 >
-<form class="w-full grid gap-3" on:submit|preventDefault>
+<form class="w-full grid gap-2" on:submit|preventDefault>
 	{#if timerData.stop_at}
 		<aside class="alert variant-ghost-warning">
 			<Fa icon={faPauseCircle} class="text-2xl" />
@@ -97,7 +90,7 @@
 		</aside>
 	{/if}
 
-	<strong>Timer sequence:</strong>
+	<strong class="pt-4 text-lg">Timer sequence:</strong>
 
 	{#each formData.segments as segment, i}
 		<div class="card w-full grid sm:grid-cols-2 md:grid-cols-3 items-center p-[2px]">
@@ -170,50 +163,77 @@
 			formData.segments.push({
 				label: `Segment ${formData.segments.length + 1}`,
 				time: 30 * 1000,
-				sound: false,
-				count_to: 0
+				count_to: 0,
+				sounds: []
 			});
 			formData.segments = [...formData.segments];
 		}}><span><Fa icon={faAdd} /></span> <span>New segment</span></button
 	>
 
-	<SlideToggle active="bg-primary-500" name="repeat" size="sm" bind:checked={formData.repeat}>
-		repeat
-	</SlideToggle>
+	<div class="pl-2">
+		<SlideToggle active="bg-primary-500" name="repeat" size="sm" bind:checked={formData.repeat}>
+			repeat
+		</SlideToggle>
+	</div>
 
-	<strong>Display options:</strong>
-	<SlideToggle
-		active="bg-primary-500"
-		name="repeat"
-		size="sm"
-		bind:checked={formData.display_options.clock}
-	>
-		<div class="grid grid-cols-2 gap-2 items-center">
-			show clock
+	<strong class="pt-4 text-lg">Timer options:</strong>
+
+	<div class="pl-2">
+		<SlideToggle
+			active="bg-primary-500"
+			name="repeat"
+			size="sm"
+			bind:checked={formData.display_options.clock}
+		>
+			<div class="grid grid-cols-2 gap-2 items-center">
+				show clock
+				<HelpPopup>
+					Shows a clock at the bottom of the timer.<br />Can be overridden on one timer by adding
+					?clock=false to the URL.
+				</HelpPopup>
+			</div>
+		</SlideToggle>
+	</div>
+
+	<label class="pl-2 w-auto">
+		<div class="flex flex-row gap-2 items-center pb-1">
+			Restart precision
 			<HelpPopup>
-				Shows a clock at the bottom of the timer.<br />Can be overridden on one timer by adding
-				?clock=false to the URL.
+				Delays changes to the timer by the set amount of seconds to make sure all displays have
+				received the update before anything changes. This is useful to make sure all displays change
+				in perfect sync if you have a lot of displays and/or a slow internet connection.
 			</HelpPopup>
 		</div>
-	</SlideToggle>
+		<select class="select" bind:value={formData.metadata.delay_start_stop}>
+			<option value={0}>None (0s)</option>
+			<option value={1000}>Low (1s)</option>
+			<option value={2000}>Medium (2s)</option>
+			<option value={3000}>High (3s)</option>
+			<option value={4000}>Very high (4s)</option>
+		</select>
+	</label>
 
-	<SlideToggle
-		active="bg-primary-500"
-		name="repeat"
-		size="sm"
-		bind:checked={formData.display_options.run_before_started}
-	>
-		<div class="grid grid-cols-2 gap-2 items-center">
-			run before start time
+	<label class="pl-2 w-auto">
+		<div class="flex flex-row gap-2 items-center pb-1">
+			Behaviour before start:
 			<HelpPopup>
-				Makes the timer run normall before the start time.<br />Can be useful if ca competition
-				should start at 9:00 but you want some test runs before.
+				What the timer should do before the start time.
+				<ul>
+					<li><strong>Show first segment:</strong> shows the beginning of the first segment</li>
+					<li><strong>Show last segment:</strong> shows the end of the last segment</li>
+					<li><strong>Run normally:</strong> makes the timer run normally</li>
+				</ul>
 			</HelpPopup>
 		</div>
-	</SlideToggle>
+		<select class="select" bind:value={formData.display_options.pre_start_behaviour}>
+			<option value="ShowFirstSegment">Show first segment</option>
+			<option value="ShowLastSegment">Show last segment</option>
+			<option value="RunNormally">Run normally</option>
+		</select>
+	</label>
 
-	<div class="flex items-center gap-2">
-		<strong>When to start the timer:</strong>
+	<div class="flex items-center gap-2 pt-4">
+		<strong class="text-lg">When to start the timer:</strong>
 		<HelpPopup>
 			The time when the
 			{#if formData.repeat}
@@ -224,7 +244,7 @@
 		</HelpPopup>
 	</div>
 
-	<div class="grid grid-cols-2 gap-3">
+	<div class="grid grid-cols-2 gap-3 pl-2">
 		<input
 			class="input variant-form-material col-span-2 md:col-span-1"
 			type="date"

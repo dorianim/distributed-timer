@@ -14,7 +14,11 @@ struct TimerSegment {
   char label[32];
 };
 
-enum class PreStartBehaviour { SHOW_ZERO, RUN_NORMALLY };
+enum class PreStartBehaviour {
+  SHOW_FIRST_SEGMENT,
+  SHOW_LAST_SEGMENT,
+  RUN_NORMALLY
+};
 
 struct DisplayOptions {
   PreStartBehaviour pre_start_behaviour;

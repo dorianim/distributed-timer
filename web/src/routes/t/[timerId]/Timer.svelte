@@ -7,6 +7,7 @@
 		calculateTimeInCurrentSegment,
 		getTimerText
 	} from '../../../utils/timer';
+	import type { Sound } from 'types/segment';
 
 	export let timerData: Timer;
 	export let soundEnabled: boolean;
@@ -35,11 +36,12 @@
 		}
 	};
 
-	const playCurrentSound = (seconds: number) => {
+	const playCurrentSound = (seconds: number, sounds: Sound[]) => {
 		if (!soundEnabled || !audios) return;
 
-		playSoundAt(60, seconds, '/sound/beep.mp3');
-		playSoundAt(5, seconds, '/sound/countdown.mp3');
+		for (const sound of sounds) {
+			playSoundAt(sound.trigger_time, seconds, `/sound/${sound.filename}`);
+		}
 	};
 
 	const calculateCurrentSegment: () => {
@@ -47,22 +49,11 @@
 		label: string;
 		seconds: number;
 		color?: string;
-		sound: boolean;
+		sounds: Sound[];
 		currentTime: number;
 	} = () => {
 		const currentTime = performance.now() + timeOffset;
-		const segments = timerData.segments;
-		let { timeInCurrentRound, state } = calculateTimeInCurrentRound(timerData, currentTime);
-
-		if (state == 'waiting') {
-			return {
-				timerText: getTimerText(0),
-				label: '',
-				seconds: 0,
-				sound: false,
-				currentTime: currentTime
-			};
-		}
+		let { timeInCurrentRound } = calculateTimeInCurrentRound(timerData, currentTime);
 
 		const { timeInCurrentSegment, currentSegment } = calculateTimeInCurrentSegment(
 			timeInCurrentRound,
@@ -76,14 +67,14 @@
 			label: currentSegment.label,
 			seconds: Math.floor(effectiveTimeInCurrentSegment / 1000),
 			color: currentSegment.color,
-			sound: currentSegment.sound,
+			sounds: currentSegment.sounds,
 			currentTime: currentTime
 		};
 	};
 
 	const update = () => {
 		currentSegment = calculateCurrentSegment();
-		const { timerText, label, color, seconds } = currentSegment;
+		const { timerText, label, color, seconds, sounds } = currentSegment;
 
 		if (timerSpan !== null) {
 			timerSpan.innerText = timerText;
@@ -93,7 +84,22 @@
 				color ?? 'rgb(var(--color-surface-900))'
 			);
 		}
-		playCurrentSound(seconds);
+		playCurrentSound(seconds, sounds);
+	};
+
+	const getAllSounds = (timer: Timer) => {
+		let sounds: string[] = [];
+
+		for (const segment of timer.segments) {
+			for (const sound of segment.sounds) {
+				const filename = `/sound/${sound.filename}`;
+				if (!sounds.includes(filename)) {
+					sounds.push(filename);
+				}
+			}
+		}
+
+		return sounds;
 	};
 
 	let audios: { [sound: string]: HTMLAudioElement } | undefined;
@@ -110,7 +116,7 @@
 
 	$: {
 		if (soundEnabled) {
-			audios = preloadSounds(['/sound/beep.mp3', '/sound/countdown.mp3']);
+			audios = preloadSounds(getAllSounds(timerData));
 		} else {
 			audios = undefined;
 		}

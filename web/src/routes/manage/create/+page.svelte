@@ -6,7 +6,7 @@
 	import type { PageData } from './$types';
 	import CreateTimerForm from './CreateTimerForm.svelte';
 	import Fa from 'svelte-fa';
-	import { faClose, faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
+	import { faClose, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 	import { goto } from '$app/navigation';
 
 	export let data: PageData;

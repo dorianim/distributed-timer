@@ -4,36 +4,87 @@
 	import { createForm } from 'felte';
 	import { validator } from '@felte/validator-yup';
 	import * as yup from 'yup';
+	import type { Segment, Sound } from 'types/segment';
+	import type { DisplayOptions } from 'types/displayOptions';
+	import type { TimerMetadata } from 'types/timerMetadata';
+	import { soundPresets } from 'utils/sounds';
 
 	export let onSubmit: (timerData: TimerCreationRequest) => void;
 
-	const templates = [
+	const defaultSounds: Sound[] = soundPresets.beepOneMinute_countdownFiveSeconds;
+
+	const templates: {
+		name: string;
+		repeat: boolean;
+		segments: Segment[];
+		display_options: DisplayOptions;
+		metadata: TimerMetadata;
+	}[] = [
 		{
 			name: 'Boulder quali 4min + 15s',
 			repeat: true,
 			segments: [
-				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
-				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
-				{ label: 'Change', time: 14000, sound: true, color: '#E66100', count_to: 1000 }
-			]
+				{
+					label: 'Boulder',
+					time: 230000,
+					sounds: defaultSounds,
+					color: '#26A269',
+					count_to: 11000
+				},
+				{ label: 'Boulder', time: 11000, sounds: defaultSounds, color: '#A51D2D', count_to: 0 },
+				{ label: 'Change', time: 14000, sounds: defaultSounds, color: '#E66100', count_to: 1000 }
+			],
+			display_options: {
+				clock: true,
+				pre_start_behaviour: 'RunNormally'
+			},
+			metadata: {
+				delay_start_stop: 0
+			}
 		},
 		{
 			name: 'Boulder quali 5min + 15s',
 			repeat: true,
 			segments: [
-				{ label: 'Boulder', time: 290000, sound: true, color: '#26A269', count_to: 11000 },
-				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
-				{ label: 'Change', time: 14000, sound: true, color: '#E66100', count_to: 1000 }
-			]
+				{
+					label: 'Boulder',
+					time: 290000,
+					sounds: defaultSounds,
+					color: '#26A269',
+					count_to: 11000
+				},
+				{ label: 'Boulder', time: 11000, sounds: defaultSounds, color: '#A51D2D', count_to: 0 },
+				{ label: 'Change', time: 14000, sounds: defaultSounds, color: '#E66100', count_to: 1000 }
+			],
+			display_options: {
+				clock: true,
+				pre_start_behaviour: 'RunNormally'
+			},
+			metadata: {
+				delay_start_stop: 0
+			}
 		},
 		{
 			name: 'Boulder final 4min + wait',
 			repeat: false,
 			segments: [
-				{ label: 'Boulder', time: 230000, sound: true, color: '#26A269', count_to: 11000 },
-				{ label: 'Boulder', time: 11000, sound: true, color: '#A51D2D', count_to: 0 },
-				{ label: 'Wait', time: 1000, sound: true, color: '#1C71D8', count_to: 240000 }
-			]
+				{
+					label: 'Boulder',
+					time: 230000,
+					sounds: soundPresets.beepFourMinutesOneMinute_countdownFiveSeconds,
+					color: '#26A269',
+					count_to: 11000
+				},
+				{ label: 'Boulder', time: 11000, sounds: defaultSounds, color: '#A51D2D', count_to: 0 },
+				{ label: 'Wait', time: 1000, sounds: [], color: '#1C71D8', count_to: 240000 }
+			],
+			display_options: {
+				clock: true,
+				pre_start_behaviour: 'ShowLastSegment'
+			},
+			metadata: {
+				delay_start_stop: 3000
+			}
 		}
 	];
 
@@ -53,7 +104,9 @@
 				password: values.password,
 				start_at: new Date().getTime(),
 				repeat: templates[values.segments].repeat,
-				segments: templates[values.segments].segments
+				segments: templates[values.segments].segments,
+				display_options: templates[values.segments].display_options,
+				metadata: templates[values.segments].metadata
 			};
 			onSubmit(formData);
 		},

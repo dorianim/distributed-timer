@@ -32,6 +32,11 @@ fn test_v0() {
     let timer: Timer = timer.into();
     assert_eq!(timer.segments.len(), 1);
     assert_eq!(timer.segments[0].label, "Boulder");
+    assert_eq!(timer.segments[0].sounds.len(), 2);
+    assert_eq!(timer.segments[0].sounds[0].filename, "beep.mp3");
+    assert_eq!(timer.segments[0].sounds[0].trigger_time, 60);
+    assert_eq!(timer.segments[0].sounds[1].filename, "countdown.mp3");
+    assert_eq!(timer.segments[0].sounds[1].trigger_time, 5);
     assert_eq!(timer.metadata.delay_start_stop, 0);
     assert_eq!(
         timer.display_options.pre_start_behaviour,
@@ -47,9 +52,14 @@ fn test_v1() {
                {
                   "label":"Boulder",
                   "time":230000,
-                  "sound":true,
                   "color":"#26A269",
-                  "count_to":11000
+                  "count_to":11000,
+                  "sounds": [
+                     {
+                        "filename": "beep.mp3",
+                        "trigger_time": 60
+                     }
+                  ]
                }
             ],
             "id":"v0",
@@ -71,6 +81,9 @@ fn test_v1() {
     let timer: Timer = timer.into();
     assert_eq!(timer.segments.len(), 1);
     assert_eq!(timer.segments[0].label, "Boulder");
+    assert_eq!(timer.segments[0].sounds.len(), 1);
+    assert_eq!(timer.segments[0].sounds[0].filename, "beep.mp3");
+    assert_eq!(timer.segments[0].sounds[0].trigger_time, 60);
     assert_eq!(timer.metadata.delay_start_stop, 5);
     assert_eq!(
         timer.display_options.pre_start_behaviour,

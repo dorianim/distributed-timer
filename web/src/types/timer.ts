@@ -1,5 +1,6 @@
 import type { DisplayOptions } from './displayOptions';
 import type { Segment } from './segment';
+import type { TimerMetadata } from './timerMetadata';
 
 export interface TimerCreationRequest {
 	id: string;
@@ -7,12 +8,17 @@ export interface TimerCreationRequest {
 	start_at: number;
 	repeat: boolean;
 	segments: Segment[];
+	metadata: TimerMetadata;
+	display_options: DisplayOptions;
 }
 
 export interface TimerUpdateRequest {
 	start_at: number;
+	stop_at?: number;
 	repeat: boolean;
 	segments: Segment[];
+	metadata: TimerMetadata;
+	display_options: DisplayOptions;
 }
 
 export interface Timer {
@@ -20,6 +26,7 @@ export interface Timer {
 	start_at: number;
 	stop_at?: number;
 	repeat: boolean;
-	display_options: DisplayOptions;
 	segments: Segment[];
+	metadata: TimerMetadata;
+	display_options: DisplayOptions;
 }

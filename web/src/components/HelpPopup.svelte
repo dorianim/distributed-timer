@@ -4,10 +4,13 @@
 	import Fa from 'svelte-fa';
 	import newUniqueId from 'locally-unique-id-generator';
 
+	let clazz = '';
+	export { clazz as class };
+
 	const id = newUniqueId();
 </script>
 
-<span>
+<span class={clazz}>
 	<div
 		class="w-fit"
 		use:popup={{
