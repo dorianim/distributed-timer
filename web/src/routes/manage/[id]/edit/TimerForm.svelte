@@ -195,31 +195,23 @@
 		</SlideToggle>
 	</div>
 
-	<div class="pl-2">
-		<RangeSlider
-			name="range-slider"
-			bind:value={formData.metadata.delay_start_stop}
-			max={4000}
-			step={1000}
-			ticked
-		>
-			<div class="flex justify-between items-center">
-				<div class="grid grid-cols-2 gap-2 items-center">
-					Restart precision
-					<HelpPopup>
-						Delays changes to the timer by the set amount of seconds to make sure all displays have
-						received the update before anything changes. This is useful to make sure all displays
-						change in perfect sync if you have a lot of displays and/or a slow internet connection.
-					</HelpPopup>
-				</div>
-				<div class="text-xs">
-					{formData.metadata.delay_start_stop / 1000}s ({precisionLabel[
-						formData.metadata.delay_start_stop / 1000
-					]})
-				</div>
-			</div>
-		</RangeSlider>
-	</div>
+	<label class="pl-2 w-auto">
+		<div class="flex flex-row gap-2 items-center pb-1">
+			Restart precision
+			<HelpPopup>
+				Delays changes to the timer by the set amount of seconds to make sure all displays have
+				received the update before anything changes. This is useful to make sure all displays change
+				in perfect sync if you have a lot of displays and/or a slow internet connection.
+			</HelpPopup>
+		</div>
+		<select class="select" bind:value={formData.metadata.delay_start_stop}>
+			<option value={0}>None (0s)</option>
+			<option value={1000}>Low (1s)</option>
+			<option value={2000}>Medium (2s)</option>
+			<option value={3000}>High (3s)</option>
+			<option value={4000}>Very high (4s)</option>
+		</select>
+	</label>
 
 	<label class="pl-2 w-auto">
 		<div class="flex flex-row gap-2 items-center pb-1">
