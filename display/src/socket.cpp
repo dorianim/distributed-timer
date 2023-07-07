@@ -172,7 +172,7 @@ void _handleMessage(JsonDocument &doc) {
 
     long long serverTime = doc["data"];
     TIME timeOffset =
-        serverTime + (getTimeRoundtrip / 2) - _lastGetTimeReceived;
+        (serverTime - 250) + (getTimeRoundtrip / 2) - _lastGetTimeReceived;
     _handleNewOffset(timeOffset);
   } else if (type == "Error") {
     _error = doc["data"][0];
