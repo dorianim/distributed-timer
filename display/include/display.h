@@ -4,7 +4,8 @@
 
 #include "timer.h"
 
-class Display {
+class Display
+{
 public:
   static Display *from(MatrixPanel_I2S_DMA *matrix);
 
@@ -21,7 +22,13 @@ protected:
   void _start();
   const char *_getErrorText();
 
-  enum DisplayState { Loading, WifiSetupNeeded, Error, Timer };
+  enum DisplayState
+  {
+    Loading,
+    WifiSetupNeeded,
+    Error,
+    Timer
+  };
 
   DisplayState _state;
   const char *_loadingText;
@@ -33,7 +40,8 @@ private:
   static void __loop(void *arg);
 };
 
-class Hub75_Display : public Display {
+class Hub75_Display : public Display
+{
 public:
   Hub75_Display(MatrixPanel_I2S_DMA *matrix);
 

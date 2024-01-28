@@ -30,7 +30,7 @@
 #define B_PIN 19
 #define C_PIN 5
 #define D_PIN 18
-#define E_PIN                                                                  \
+#define E_PIN \
   32 // required for 1/32 scan panels, like 64x64px. Any available pin would do,
      // i.e. IO32
 #define LAT_PIN 4
@@ -39,9 +39,9 @@
 
 #define WIFI_RESET_PIN 21
 
-HUB75_I2S_CFG::i2s_pins _pins = {R1_PIN, G1_PIN,  B1_PIN, R2_PIN, G2_PIN,
-                                 B2_PIN, A_PIN,   B_PIN,  C_PIN,  D_PIN,
-                                 E_PIN,  LAT_PIN, OE_PIN, CLK_PIN};
+HUB75_I2S_CFG::i2s_pins _pins = {R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN,
+                                 B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN,
+                                 E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
 HUB75_I2S_CFG mxconfig(64,   // Module width
                        64,   // Module height
                        2,    // chain length
@@ -50,7 +50,9 @@ HUB75_I2S_CFG mxconfig(64,   // Module width
 
 Display *display;
 
-void setup() {
+void setup()
+{
+  psramInit();
   Serial.begin(115200);
 
   mxconfig.latch_blanking = 1;
@@ -62,13 +64,15 @@ void setup() {
 
   pinMode(WIFI_RESET_PIN, INPUT_PULLUP);
 
-  if (digitalRead(WIFI_RESET_PIN) == LOW) {
+  if (digitalRead(WIFI_RESET_PIN) == LOW)
+  {
     display->printLoading("reset!");
     wifi::reset();
     delay(5000);
 
     display->printLoading("release button!");
-    while (digitalRead(WIFI_RESET_PIN) == LOW) {
+    while (digitalRead(WIFI_RESET_PIN) == LOW)
+    {
       delay(100);
     }
 
@@ -76,7 +80,8 @@ void setup() {
   }
 
   display->printLoading("connecting wifi");
-  if (!wifi::init(display)) {
+  if (!wifi::init(display))
+  {
     ESP.restart();
     delay(10000);
   }
@@ -85,19 +90,23 @@ void setup() {
   WebSocket::init(wifi::timerId());
 }
 
-void refreshDisplay() {
-  if (WebSocket::error() > 0) {
+void refreshDisplay()
+{
+  if (WebSocket::error() > 0)
+  {
     display->printError(WebSocket::error());
     return;
   }
 
   TIME offset = WebSocket::offset();
 
-  if (!WebSocket::connected()) {
+  if (!WebSocket::connected())
+  {
     return;
   }
 
-  if (offset == 0) {
+  if (offset == 0)
+  {
     display->printLoading("awaiting data");
     return;
   }
@@ -105,14 +114,17 @@ void refreshDisplay() {
   display->printTimer(offset);
 }
 
-void loop() {
+void loop()
+{
   wifi::loop();
-  if (!wifi::connected()) {
+  if (!wifi::connected())
+  {
     // ESP.restart();
   }
 
   WebSocket::loop();
-  if (WebSocket::error() < 0) {
+  if (WebSocket::error() < 0)
+  {
     ESP.restart();
   }
 
