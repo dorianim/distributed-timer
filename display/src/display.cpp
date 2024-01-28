@@ -7,14 +7,19 @@
 
 #include "advent_pro_regular.h"
 
+#define TAG "Display"
+
 Display::Display() : _state(Loading), _loadingText("starting up") {}
 
-void Display::_start() {
+void Display::_start()
+{
   xTaskCreate(Display::__loop, "display", 10000, this, 10, NULL);
 }
 
-const char *Display::_getErrorText() {
-  switch (this->_errorCode) {
+const char *Display::_getErrorText()
+{
+  switch (this->_errorCode)
+  {
   case 404:
     return "Timer not found";
   default:
@@ -22,32 +27,39 @@ const char *Display::_getErrorText() {
   }
 }
 
-void Display::__loop(void *arg) {
+void Display::__loop(void *arg)
+{
   Display *that = (Display *)arg;
   that->setup();
 
-  for (;;) {
+  for (;;)
+  {
     that->loop();
   }
 }
 
-Display *Display::from(MatrixPanel_I2S_DMA *matrix) {
+Display *Display::from(MatrixPanel_I2S_DMA *matrix)
+{
   return new Hub75_Display(matrix);
 }
 
-void Display::printLoading(const char *text) {
+void Display::printLoading(const char *text)
+{
   this->_loadingText = text;
   this->_state = Loading;
 }
-void Display::printWifiSetup(String id) {
+void Display::printWifiSetup(String id)
+{
   this->_wifiId = id;
   this->_state = WifiSetupNeeded;
 }
-void Display::printError(int error) {
+void Display::printError(int error)
+{
   this->_errorCode = error;
   this->_state = Error;
 }
-void Display::printTimer(TIME timeOffset) {
+void Display::printTimer(TIME timeOffset)
+{
   this->_timeOffset = timeOffset;
   this->_state = Timer;
 }
@@ -57,7 +69,8 @@ void Display::printTimer(TIME timeOffset) {
  */
 
 Hub75_Display::Hub75_Display(MatrixPanel_I2S_DMA *matrix)
-    : Display(), _matrix(matrix) {
+    : Display(), _matrix(matrix)
+{
 
   _matrix->begin();
   _matrix->clearScreen();
@@ -65,7 +78,8 @@ Hub75_Display::Hub75_Display(MatrixPanel_I2S_DMA *matrix)
   _matrix->setBrightness8(250);
   _matrix->cp437(true);
 
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 10; i++)
+  {
     brand_letter_delays[i] = i * DIM_DELAY_ININTIAL_STEP;
   }
 
@@ -77,16 +91,20 @@ void Hub75_Display::setup() {}
 uint8_t wifiIcon[] PROGMEM = {B01111110, B10000001, B00111100,
                               B01000010, B00011000, B00011000};
 
-void Hub75_Display::loop() {
+void Hub75_Display::loop()
+{
   _matrix->clearScreen();
   _matrix->setCursor(0, 0);
 
-  switch (this->_state) {
-  case Loading: {
+  switch (this->_state)
+  {
+  case Loading:
+  {
     _matrix->setFont(&AdventPro_Regular18pt7b);
     _matrix->setTextSize(1);
     _matrix->setCursor(4, 40);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++)
+    {
       _printBrandAnimationLetter(brand_letters[i], brand_letter_brightnesses[i],
                                  brand_letter_delays[i]);
     }
@@ -114,7 +132,8 @@ void Hub75_Display::loop() {
     _matrix->println("4. Go back");
     _matrix->println("5. Configure WiFi");
     break;
-  case Error: {
+  case Error:
+  {
     _setTextColor(0xffffff);
     _matrix->setCursor(49, 3);
     _matrix->print("ERROR");
@@ -135,7 +154,8 @@ void Hub75_Display::loop() {
     _matrix->print(WiFi.localIP().toString());
     break;
   }
-  case Timer: {
+  case Timer:
+  {
     _matrix->setFont();
     _matrix->setTextSize(1);
     _setTextColor(0xff, 0xff, 0xff);
@@ -166,7 +186,8 @@ void Hub75_Display::loop() {
     _matrix->setCursor(71, 15);
     _matrix->printf("%02d", segment.seconds % 60);
 
-    if (timer::timerData()->display_options.clock) {
+    if (timer::timerData()->display_options.clock)
+    {
 
       int timezoneOffset = ((60 * 60) * wifi::timezoneOffset());
       time_t timer = (segment.currentTime / 1000) + timezoneOffset;
@@ -179,14 +200,25 @@ void Hub75_Display::loop() {
       _matrix->printf("%02d:%02d", time->tm_hour, time->tm_min);
     }
 
+    // Log everything
+    static unsigned long lastLog = 0;
+    if (lastLog + 1000 < millis())
+    {
+      ESP_LOGI(TAG, "Current segment: %s, %ld (%d), %llu", segment.label, segment.seconds, segment.color, segment.currentTime);
+      lastLog = millis();
+    }
+
     break;
   }
   }
 
-  if (!wifi::connected()) {
+  if (!wifi::connected())
+  {
     _matrix->drawBitmap(118, 2, (uint8_t *)&wifiIcon, 8, 6,
                         this->_packColor(255, 0, 0), 0);
-  } else if (!WebSocket::connected()) {
+  }
+  else if (!WebSocket::connected())
+  {
     _matrix->drawBitmap(118, 2, (uint8_t *)&wifiIcon, 8, 6,
                         this->_packColor(255, 150, 0), 0);
   }
@@ -196,31 +228,44 @@ void Hub75_Display::loop() {
 }
 
 void Hub75_Display::_printBrandAnimationLetter(char letter, uint8_t &brightness,
-                                               uint16_t &delay) {
+                                               uint16_t &delay)
+{
   _setTextColor(0, 0, brightness);
   _matrix->print(letter);
-  if (brightness > DIM_TO && delay == 0) {
+  if (brightness > DIM_TO && delay == 0)
+  {
     brightness -= DIM_STEP;
-  } else if (brightness <= DIM_TO && delay == 0) {
+  }
+  else if (brightness <= DIM_TO && delay == 0)
+  {
     delay = DIM_DELAY;
-  } else if (brightness < 0xff && delay == DIM_DELAY &&
-             0xff - brightness > DIM_STEP) {
+  }
+  else if (brightness < 0xff && delay == DIM_DELAY &&
+           0xff - brightness > DIM_STEP)
+  {
     brightness += DIM_STEP;
-  } else if (brightness < 0xff && delay == DIM_DELAY) {
+  }
+  else if (brightness < 0xff && delay == DIM_DELAY)
+  {
     brightness = 0xff;
-  } else {
+  }
+  else
+  {
     delay--;
   }
 }
 
-uint16_t Hub75_Display::_packColor(uint8_t r, uint8_t g, uint8_t b) {
+uint16_t Hub75_Display::_packColor(uint8_t r, uint8_t g, uint8_t b)
+{
   return ((uint16_t)(r & 0xF8) << 8) | ((uint16_t)(g & 0xFC) << 3) | (b >> 3);
 }
 
-void Hub75_Display::_setTextColor(uint32_t c) {
+void Hub75_Display::_setTextColor(uint32_t c)
+{
   _setTextColor(c >> 16, c >> 8, c);
 }
-void Hub75_Display::_setTextColor(uint8_t r, uint8_t g, uint8_t b) {
+void Hub75_Display::_setTextColor(uint8_t r, uint8_t g, uint8_t b)
+{
   uint16_t packed = this->_packColor(r, g, b);
 
   _matrix->setTextColor(packed);
