@@ -2,48 +2,25 @@
 	import { ProgressRadial } from '@skeletonlabs/skeleton';
 	import { get } from 'svelte/store';
 	import { API_URL } from '../../../stores';
-	import type { TimerCreationRequest } from '../../../types/timer';
+	import type { Timer, TimerCreationRequest, TimerCreationResponse } from '../../../types/timer';
 	import type { PageData } from './$types';
 	import CreateTimerForm from './CreateTimerForm.svelte';
 	import Fa from 'svelte-fa';
 	import { faClose, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 	import { goto } from '$app/navigation';
+	import { createTimer } from 'utils/api';
 
 	export let data: PageData;
 	const { fetch } = data;
-	let submitResult: Promise<string | void> = Promise.resolve();
-
-	interface ErrorMessages {
-		[key: number]: string;
-	}
-
-	const errorMessages: ErrorMessages = {
-		409: 'A timer with that name already exists'
-	};
+	let submitResult: Promise<TimerCreationResponse | void> = Promise.resolve();
 
 	const onSubmit = (timerData: TimerCreationRequest) => {
-		submitResult = fetch(`${get(API_URL)}/timer`, {
-			method: 'POST',
-			body: JSON.stringify(timerData),
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		})
-			.then((res) => {
-				if (!res.ok && res.status in errorMessages) {
-					throw new Error(errorMessages[res.status]);
-				} else if (!res.ok) {
-					throw new Error(res.statusText);
-				}
-
-				return res.json();
-			})
-			.then((data) => {
-				console.log(data);
-				localStorage.setItem('token', data.token);
-				goto(`/manage/${data.timer.id}`);
-				return data;
-			});
+		submitResult = createTimer(timerData, fetch).then((data) => {
+			console.log(data);
+			localStorage.setItem('token', data.token);
+			goto(`/manage/${data.timer.id}`);
+			return data;
+		});
 	};
 </script>
 

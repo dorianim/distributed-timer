@@ -7,7 +7,8 @@
 	import { faClose, faCircleCheck, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
-	import { updateTimer } from '../helpers';
+	import ImportExport from './ImportExport.svelte';
+	import { updateTimer } from 'utils/api';
 
 	export let data: PageData;
 	let { timerData, fetch } = data;
@@ -18,7 +19,12 @@
 	}
 
 	const onSubmit = async (newTimerData: TimerUpdateRequest) => {
-		submitResult = updateTimer(timerData.id, newTimerData, fetch).then((timer: Timer) => {
+		submitResult = updateTimer(
+			timerData.id,
+			newTimerData,
+			localStorage.getItem('token')!,
+			fetch
+		).then((timer: Timer) => {
 			timerData = timer;
 			goto(`/manage/${timerData.id}`);
 			return timer;
@@ -47,6 +53,7 @@
 			</aside>
 		{/if}
 		<TimerForm {timerData} {onSubmit} />
+		<ImportExport bind:timerData {data} />
 	{:catch error}
 		<div class="alert variant-ghost-error">
 			<Fa icon={faCircleExclamation} class="text-2xl" />

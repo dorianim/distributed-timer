@@ -34,33 +34,3 @@ export const calculateStartTimeAfterSkip = (timerData: Timer) => {
 
 	return timerData.start_at - timeInCurrentSegment;
 };
-
-export const getTimer = async (id: string, fetch: Fetch) => {
-	const resp = await fetch(`${get(API_URL)}/timer/${id}`);
-	if (!resp.ok) {
-		throw error(resp.status, resp.statusText);
-	}
-	const timerData: Timer | undefined = resp.ok ? await resp.json() : undefined;
-	if (!timerData) throw error(404, 'Timer not found');
-	return timerData;
-};
-
-export const updateTimer = async (id: string, newTimerData: TimerUpdateRequest, fetch: Fetch) => {
-	return fetch(`${get(API_URL)}/timer/${id}`, {
-		method: 'PUT',
-		body: JSON.stringify(newTimerData),
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${localStorage.getItem('token')}`
-		}
-	})
-		.then((res) => {
-			if (!res.ok) {
-				throw new Error(res.statusText);
-			}
-			return res.json();
-		})
-		.then((timer: Timer) => {
-			return timer;
-		});
-};

@@ -2,13 +2,10 @@
 	import Fa from 'svelte-fa';
 	import type { PageData } from './$types';
 	import { faEdit, faForward, faPause, faPlay, faRefresh } from '@fortawesome/free-solid-svg-icons';
-	import {
-		updateTimer,
-		calculateStartTimeAfterResume,
-		calculateStartTimeAfterSkip
-	} from './helpers';
+	import { calculateStartTimeAfterResume, calculateStartTimeAfterSkip } from './helpers';
 	import type { Timer } from 'types/timer';
 	import { ProgressRadial } from '@skeletonlabs/skeleton';
+	import { updateTimer } from 'utils/api';
 
 	export let data: PageData;
 	let { timerData } = data;
@@ -25,7 +22,12 @@
 			stop_at: stop_at
 		};
 
-		submitResult = updateTimer(timerData.id, newTimer, data.fetch).then((timer: Timer) => {
+		submitResult = updateTimer(
+			timerData.id,
+			newTimer,
+			localStorage.getItem('token')!,
+			data.fetch
+		).then((timer: Timer) => {
 			timerData = timer;
 			return timer;
 		});
