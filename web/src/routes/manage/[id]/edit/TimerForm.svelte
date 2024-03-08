@@ -72,7 +72,7 @@
 		}
 	};
 
-	formData = timerDataToFormData(timerData);
+	$: formData = timerDataToFormData(timerData);
 
 	const precisionLabel = ['none', 'low', 'medium', 'high', 'very high'];
 </script>

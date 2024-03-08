@@ -30,3 +30,12 @@ export interface Timer {
 	metadata: TimerMetadata;
 	display_options: DisplayOptions;
 }
+
+export interface TimerLoginResponse {
+	token: string;
+}
+
+export interface TimerCreationResponse {
+	timer: Timer;
+	token: string;
+}
