@@ -1,14 +1,5 @@
-import { error } from '@sveltejs/kit';
-import { API_URL } from 'stores';
-import { get } from 'svelte/store';
-import type { Fetch } from 'types/fetch';
-import type { Segment } from 'types/segment';
-import type { Timer, TimerUpdateRequest } from 'types/timer';
-import {
-	calculateTimeInCurrentRound,
-	calculateTimeInCurrentSegment,
-	getTimerText
-} from 'utils/timer';
+import type { Timer } from 'types/timer';
+import { calculateTimeInCurrentRound, calculateTimeInCurrentSegment } from 'utils/timer';
 
 export const calculateStartTimeAfterResume = (timerData: Timer) => {
 	if (!timerData.stop_at) {

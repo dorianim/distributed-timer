@@ -6,34 +6,17 @@
 </script>
 
 <script lang="ts">
-	import {
-		type ModalSettings,
-		modalStore,
-		ProgressRadial,
-		TabGroup,
-		TabAnchor,
-		Tab
-	} from '@skeletonlabs/skeleton';
+	import { modalStore, ProgressRadial } from '@skeletonlabs/skeleton';
 	import type { SvelteComponent } from 'svelte';
-	import type { PageData } from './$types';
 	import { getTimer, loginTimer, updateTimer } from 'utils/api';
-	import { page } from '$app/stores';
 	import Fa from 'svelte-fa';
-	import {
-		faCircleExclamation,
-		faClose,
-		faFileExport,
-		faFileImport,
-		faWarning
-	} from '@fortawesome/free-solid-svg-icons';
+	import { faCircleExclamation, faClose } from '@fortawesome/free-solid-svg-icons';
 	import ImportExportForm, {
 		type ImportExportAction,
 		type ImportExportFormData
 	} from './ImportExportForm.svelte';
-	import { Result } from 'postcss';
 	import type { TimerUpdateRequest, Timer } from 'types/timer';
 	import type { Fetch } from 'types/fetch';
-	import ImportExport from './ImportExport.svelte';
 
 	/** Exposes parent props to this component. */
 	export let parent: SvelteComponent;
@@ -67,12 +50,16 @@
 			};
 			if ($modalStore[0].response) $modalStore[0].response(result);
 			modalStore.close();
-		} catch {}
+		} catch (e) {
+			console.log('Error during import/export: ', e);
+		}
 	}
 
 	const handleImport = async (id: string): Promise<Timer> => {
 		const timerResponse = await getTimer(id, fetch);
-		return updateTimer(timerData.id, timerResponse, localStorage.getItem('token')!, fetch);
+		const token = localStorage.getItem('token');
+		if (!token) throw new Error('No token found');
+		return updateTimer(timerData.id, timerResponse, token, fetch);
 	};
 
 	const handleExport = async (

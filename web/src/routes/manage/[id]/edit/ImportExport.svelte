@@ -1,24 +1,10 @@
 <script lang="ts">
-	import {
-		faCopy,
-		faDeleteLeft,
-		faEdit,
-		faFileExport,
-		faFileImport,
-		faTrash
-	} from '@fortawesome/free-solid-svg-icons';
-	import {
-		type ModalSettings,
-		modalStore,
-		ProgressRadial,
-		type ModalComponent
-	} from '@skeletonlabs/skeleton';
+	import { faFileExport } from '@fortawesome/free-solid-svg-icons';
+	import { type ModalSettings, modalStore } from '@skeletonlabs/skeleton';
 	import Fa from 'svelte-fa';
 	import ImportExportModal, { type ImportExportResult } from './ImportExportModal.svelte';
-	import { loginTimer } from 'utils/api';
 	import type { PageData } from './$types';
 	import type { Timer } from 'types/timer';
-	import type { ImportExportFormData } from './ImportExportForm.svelte';
 
 	export let data: PageData;
 	export let timerData: Timer;

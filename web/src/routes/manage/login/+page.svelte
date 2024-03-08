@@ -4,8 +4,6 @@
 	import Fa from 'svelte-fa';
 	import { faClose, faCircleExclamation } from '@fortawesome/free-solid-svg-icons';
 	import LoginForm from './LoginForm.svelte';
-	import { get } from 'svelte/store';
-	import { API_URL } from '../../../stores';
 	import { goto } from '$app/navigation';
 	import { loginTimer } from 'utils/api';
 

@@ -17,7 +17,7 @@
 	export let onSubmit: () => void;
 	export let onCancel: () => void;
 
-	let formValid: boolean = false;
+	let formValid = false;
 
 	$: {
 		formValid = checkFormValid(formData);

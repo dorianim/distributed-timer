@@ -36,6 +36,6 @@ export interface TimerLoginResponse {
 }
 
 export interface TimerCreationResponse {
-	timer: Timer,
-	token: string,
+	timer: Timer;
+	token: string;
 }
