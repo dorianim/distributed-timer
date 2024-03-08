@@ -9,13 +9,14 @@ import type {
 	TimerUpdateRequest
 } from 'types/timer';
 
-export const getTimer = async (id: string, fetch: Fetch): Promise<Timer> => {
-	const resp = await fetch(`${get(API_URL)}/timer/${id}`);
-	if (!resp.ok) {
-		throw new Error(resp.statusText);
+const getTimer = async (id: string, fetch: Fetch): Promise<Timer> => {
+	const res = await fetch(`${get(API_URL)}/timer/${id}`);
+
+	if (!res.ok) {
+		throw new Error(res.statusText);
 	}
 
-	return await resp.json();
+	return await res.json();
 };
 
 const loginTimer = async (
@@ -38,7 +39,7 @@ const loginTimer = async (
 		throw new Error(res.statusText);
 	}
 
-	return (await res.json()) as TimerLoginResponse;
+	return await res.json();
 };
 
 const updateTimer = async (
@@ -47,23 +48,20 @@ const updateTimer = async (
 	token: string,
 	fetch: Fetch
 ) => {
-	return fetch(`${get(API_URL)}/timer/${id}`, {
+	const res = await fetch(`${get(API_URL)}/timer/${id}`, {
 		method: 'PUT',
 		body: JSON.stringify(newTimerData),
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then((res) => {
-			if (!res.ok) {
-				throw new Error(res.statusText);
-			}
-			return res.json();
-		})
-		.then((timer: Timer) => {
-			return timer;
-		});
+	});
+
+	if (!res.ok) {
+		throw new Error(res.statusText);
+	}
+
+	return await res.json();
 };
 
 interface ErrorMessages {
@@ -92,7 +90,7 @@ const createTimer = async (
 		throw new Error(res.statusText);
 	}
 
-	return (await res.json()) as TimerCreationResponse;
+	return await res.json();
 };
 
-export { loginTimer, updateTimer, createTimer };
+export { loginTimer, updateTimer, createTimer, getTimer };

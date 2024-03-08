@@ -37,7 +37,6 @@
 	Do you want to import (copy from another timer to this one) or export (copy from this one to
 	another timer)?
 </article>
-<!-- Enable for debugging: -->
 
 <TabGroup
 	justify="justify-around"
@@ -85,7 +84,6 @@
 
 {#if formValid}
 	<aside class="alert variant-filled-warning">
-		<!-- Icon -->
 		<div><Fa icon={faWarning} /></div>
 
 		<div class="alert-message">

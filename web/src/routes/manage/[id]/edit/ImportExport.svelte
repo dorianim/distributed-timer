@@ -19,7 +19,6 @@
 
 			response: (r?: ImportExportResult) => {
 				if (r && r.action === 'Import') {
-					console.log('response!');
 					timerData = r.newTimer;
 				}
 			}

@@ -18,11 +18,9 @@
 	import type { TimerUpdateRequest, Timer } from 'types/timer';
 	import type { Fetch } from 'types/fetch';
 
-	/** Exposes parent props to this component. */
 	export let parent: SvelteComponent;
 	const { fetch, timerData }: { fetch: Fetch; timerData: Timer } = $modalStore[0].meta;
 
-	// Form Data
 	let formData: ImportExportFormData = {
 		action: 'Import',
 		id: '',
@@ -30,9 +28,7 @@
 	};
 	let submitResult: Promise<Timer | void> = Promise.resolve();
 
-	// We've created a custom submit function to pass the response and close the modal.
 	async function onSubmit() {
-		console.log('Handling import/export');
 		if (formData.action === 'Import') {
 			submitResult = handleImport(formData.id);
 		} else if (formData.action === 'Export') {
@@ -41,13 +37,13 @@
 
 		try {
 			let newTimer = await submitResult;
-
 			if (!newTimer) return;
 
 			let result: ImportExportResult = {
 				newTimer,
 				action: formData.action
 			};
+
 			if ($modalStore[0].response) $modalStore[0].response(result);
 			modalStore.close();
 		} catch (e) {
@@ -74,13 +70,10 @@
 	async function onCancel() {
 		parent.onClose();
 	}
-
-	// Base Classes
-	const cBase = 'card p-4 w-modal shadow-xl space-y-4';
 </script>
 
 {#if $modalStore[0]}
-	<div class="modal-example-form {cBase}">
+	<div class="modal-example-form card p-4 w-modal shadow-xl space-y-4">
 		{#await submitResult}
 			<div class="flex items-center justify-center">
 				<ProgressRadial class="w-10" />
