@@ -52,7 +52,7 @@
 				>
 			</aside>
 		{/if}
-		<TimerForm {timerData} {onSubmit} />
+		<TimerForm bind:timerData {onSubmit} />
 		<ImportExport bind:timerData {data} />
 	{:catch error}
 		<div class="alert variant-ghost-error">
