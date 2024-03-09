@@ -18,17 +18,14 @@
 		if (browser && !localStorage.getItem('token')) goto('/manage/login');
 	}
 
-	const onSubmit = async (newTimerData: TimerUpdateRequest) => {
-		submitResult = updateTimer(
-			timerData.id,
-			newTimerData,
-			localStorage.getItem('token')!,
-			fetch
-		).then((timer: Timer) => {
-			timerData = timer;
-			goto(`/manage/${timerData.id}`);
-			return timer;
-		});
+	const onSubmit = async () => {
+		submitResult = updateTimer(timerData.id, timerData, localStorage.getItem('token')!, fetch).then(
+			(timer: Timer) => {
+				timerData = timer;
+				goto(`/manage/${timerData.id}`);
+				return timer;
+			}
+		);
 	};
 </script>
 
@@ -52,7 +49,7 @@
 				>
 			</aside>
 		{/if}
-		<TimerForm {timerData} {onSubmit} />
+		<TimerForm bind:timerData {onSubmit} />
 		<ImportExport bind:timerData {data} />
 	{:catch error}
 		<div class="alert variant-ghost-error">
