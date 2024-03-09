@@ -30,14 +30,10 @@
 	}
 
 	export let timerData: Timer;
-	export let onSubmit: (timerData: Timer) => void;
+	export let onSubmit: () => void;
 
 	let formData: TimerFormData;
 	let editingSegment: number | undefined = undefined;
-
-	const handleSubmit = () => {
-		onSubmit(formDataToTimerData(formData));
-	};
 
 	const timerDataToFormData = (timerData: Timer): TimerFormData => {
 		return {
@@ -276,7 +272,7 @@
 		current time on the timer <b class="text-[#E01B24]">WILL CHANGE</b> as soon as you save!
 	</p>
 
-	<button class="btn variant-filled-secondary" on:click={handleSubmit}>
+	<button class="btn variant-filled-secondary" on:click={onSubmit}>
 		<span><Fa icon={faSave} /></span><span>Save</span>
 	</button>
 </form>
