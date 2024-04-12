@@ -59,6 +59,7 @@ void setup()
   mxconfig.i2sspeed = HUB75_I2S_CFG::HZ_20M;
   mxconfig.driver = HUB75_I2S_CFG::FM6124;
   mxconfig.double_buff = true;
+  mxconfig.clkphase = false;
   mxconfig.setPixelColorDepthBits(4);
   display = Display::from(new MatrixPanel_I2S_DMA(mxconfig));
 

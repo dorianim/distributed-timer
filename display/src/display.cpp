@@ -175,16 +175,29 @@ void Hub75_Display::loop()
     _matrix->setCursor((128 - label.length() * 6) / 2, 3);
     _matrix->print(label);
 
+    long seconds = segment.seconds;
+    long minutes = seconds / 60;
+    long hours = minutes / 60;
+
+    long firstNum = minutes % 60;
+    long secondNum = seconds % 60;
+
+    if (hours > 0)
+    {
+      secondNum = firstNum;
+      firstNum = hours;
+    }
+
     _setTextColor(segment.color);
     _matrix->setTextSize(5);
     _matrix->setTextWrap(false);
     _matrix->setCursor(1, 15);
-    _matrix->printf("%02d", segment.seconds / 60);
+    _matrix->printf("%02d", firstNum);
 
     _matrix->setCursor(51, 15);
     _matrix->print(":");
     _matrix->setCursor(71, 15);
-    _matrix->printf("%02d", segment.seconds % 60);
+    _matrix->printf("%02d", secondNum);
 
     if (timer::timerData()->display_options.clock)
     {
