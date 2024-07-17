@@ -15,8 +15,9 @@
 	export let displayOptionsOverride: DisplayOptions | undefined;
 
 	const preloadSounds = (sounds: string[]) => {
+		const soundsSet = new Set(sounds);
 		let audios: { [sound: string]: HTMLAudioElement } = {};
-		for (const sound of sounds) {
+		for (const sound of soundsSet) {
 			console.log('preloading sound: ', sound);
 			const audio = new Audio(sound);
 			audio.load();
