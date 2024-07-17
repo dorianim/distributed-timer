@@ -2,6 +2,8 @@
 
 #include "timer.h"
 
+static const char *TAG = "timer";
+
 namespace timer
 {
 
@@ -32,7 +34,7 @@ namespace timer
       return totalTimePerRound;
     }
 
-    long elapsedTime = currentTime - _timerData.start_at;
+    long long elapsedTime = (long long)currentTime - (long long)_timerData.start_at;
 
     if (_timerData.stop_at != 0 && currentTime > _timerData.stop_at)
     {
@@ -44,18 +46,22 @@ namespace timer
       return totalTimePerRound;
     }
 
-    return elapsedTime % totalTimePerRound;
+    // Serial.printf("elapsedTime: %lld, totalTimePerRound: %ld", elapsedTime, totalTimePerRound);
+
+    return (((elapsedTime % totalTimePerRound) + totalTimePerRound) % totalTimePerRound);
   }
 
   ActiveSegment calculateCurrentSegment(TIME timeOffset)
   {
     if (!_timerData.valid || timeOffset == 0)
     {
-      return {0, 0xfff, "", 0};
+      return {0, 0xfff, "ENOVAL", 0};
     }
 
     TIME currentTime = (TIME)millis() + timeOffset;
     long timeInCurrentRound = calculateTimeInCurrentRound(currentTime);
+
+    // Serial.printf("currentTime: %llu timeInCurrentRound: %ld\n", currentTime, timeInCurrentRound);
 
     int currentSegmentIndex = 0;
     long timeInCurrentSegment = 0;

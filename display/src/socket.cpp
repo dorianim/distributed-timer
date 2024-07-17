@@ -232,8 +232,10 @@ namespace WebSocket
       Serial.printf("Roundtrip: %dms\n", getTimeRoundtrip);
 
       long long serverTime = doc["data"];
+      // TODO: FIXME!
       TIME timeOffset =
-          (serverTime - 250) + (getTimeRoundtrip / 2) - _lastGetTimeReceived;
+          // (serverTime - 250) + (getTimeRoundtrip / 2) - _lastGetTimeReceived;
+          (serverTime - 125) + (getTimeRoundtrip / 2) - _lastGetTimeReceived;
       _handleNewOffset(timeOffset);
     }
     else if (type == "Error")
